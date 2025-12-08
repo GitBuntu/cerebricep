@@ -9,7 +9,7 @@ Welcome, AI coding agents! This guide summarizes the essential knowledge and con
 - **Modular Bicep IaC**: Infrastructure is defined using Bicep modules under `/modules/` (e.g., `function/`, `key-vault/`, `sql/`, `storage-account/`). Each module encapsulates a specific Azure resource or pattern.
 - **Environment Separation**: Deployments are environment-specific, with `/environments/dev/` and `/environments/prod/` containing main Bicep entrypoints and parameter files. Use these to manage configuration drift and promote changes safely.
 - **Policy as Code**: Azure Policy definitions are managed in `/policy/`, with reusable modules (e.g., `require-tags/`) and a dedicated deployment script. Policies enforce tagging and compliance across resources.
-- **Pipelines**: CI/CD is orchestrated via Github Actions, supporting multi-stage deployments and infra validation.
+- **Pipelines**: CI/CD is orchestrated via GitHub Actions, supporting multi-stage deployments and infra validation.
 
 ---
 
@@ -38,7 +38,7 @@ Welcome, AI coding agents! This guide summarizes the essential knowledge and con
 
 - **Azure Services**: The codebase provisions and configures Azure Functions, SQL, Storage, and Key Vault.
 - **Cross-Module Communication**: Outputs from one module (e.g., storage account connection string) are passed as parameters to dependent modules.
-- **External Scripts**: Bash scripts in `/scripts/` are the canonical way to interact with Azure resources outside of Bicep.
+- **External Scripts**: PowerShell scripts in `/scripts/` are the canonical way to interact with Azure resources outside of Bicep.
 
 ---
 
@@ -48,7 +48,7 @@ Welcome, AI coding agents! This guide summarizes the essential knowledge and con
 - `/environments/` — Environment-specific deployment entrypoints and parameters
 - `/policy/` — Policy definitions and deployment scripts
 - `/scripts/` — Automation scripts for infra, security, and auditing
-- `/pipelines/<todo>.yml` — Main CI/CD pipeline definition
+- `/pipelines/azure-pipelines.yml` — Main CI/CD pipeline definition
 - `README.md` — High-level project overview and getting started instructions
 
 ---
@@ -56,7 +56,7 @@ Welcome, AI coding agents! This guide summarizes the essential knowledge and con
 ## 6. Examples
 
 - **Adding a New Resource**: Create a new Bicep module in `/modules/`, reference it in the appropriate environment main Bicep file, and update parameters as needed.
-- **Updating a Policy**: Modify the relevant Bicep in `/policy/require-tags/`, then redeploy using `policy/deploy.sh`.
+- **Updating a Policy**: Modify the relevant Bicep in `/policy/require-tags/`, then redeploy using `policy/deploy.ps1`.
 
 ---
 
