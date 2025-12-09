@@ -1,0 +1,25 @@
+# ============================================================================
+# CODEOWNERS - Automatic PR Review Assignment
+# ============================================================================
+# 
+# These owners will be automatically requested for review when someone opens
+# a pull request that modifies the corresponding files.
+#
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+*                               @GitBuntu
+
+# Infrastructure code
+/infra/                         @GitBuntu
+/bicepconfig.json               @GitBuntu
+
+# CI/CD pipelines
+/.github/workflows/             @GitBuntu
+
+# Environment-specific configurations (may require additional approval)
+/infra/environments/prod.bicepparam   @GitBuntu
+
+# Documentation
+/docs/                          @GitBuntu
+README.md                       @GitBuntu
