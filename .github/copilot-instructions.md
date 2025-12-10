@@ -44,12 +44,11 @@ Welcome, AI coding agents! This guide summarizes the essential knowledge and con
 
 ## 5. Key Files & Directories
 
-- `/modules/` — All reusable Bicep modules
-- `/environments/` — Environment-specific deployment entrypoints and parameters
-- `/policy/` — Policy definitions and deployment scripts
-- `/scripts/` — Automation scripts for infra, security, and auditing
-- `/pipelines/azure-pipelines.yml` — Main CI/CD pipeline definition
-- `README.md` — High-level project overview and getting started instructions
+- `/infra/modules/` — All reusable Bicep modules
+- `/infra/environments/` — Environment-specific parameter files
+- `/.github/workflows/` — CI/CD pipeline definitions
+- `/.github/prompts/` — Reusable Copilot prompts
+- `/.github/chatmodes/` — Custom Copilot chat modes
 
 ---
 
