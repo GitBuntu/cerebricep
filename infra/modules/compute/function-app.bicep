@@ -21,6 +21,9 @@ param sku string = 'Y1'
 @description('User-assigned managed identity resource ID')
 param managedIdentityId string
 
+@description('User-assigned managed identity client ID')
+param managedIdentityClientId string
+
 @description('Storage account name for Function App')
 param storageAccountName string
 
@@ -93,7 +96,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'AzureWebJobsStorage__clientId'
-          value: reference(managedIdentityId, '2023-01-31').clientId
+          value: managedIdentityClientId
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
@@ -117,7 +120,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'AZURE_CLIENT_ID'
-          value: reference(managedIdentityId, '2023-01-31').clientId
+          value: managedIdentityClientId
         }
       ]
     }
@@ -128,4 +131,3 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 output id string = functionApp.id
 output name string = functionApp.name
 output hostname string = functionApp.properties.defaultHostName
-output principalId string = functionApp.identity.userAssignedIdentities[managedIdentityId].principalId
