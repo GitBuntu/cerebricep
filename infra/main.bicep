@@ -180,6 +180,7 @@ module functionApp './modules/compute/function-app.bicep' = {
     tags: commonTags
     sku: functionAppSku
     managedIdentityId: identity.outputs.id
+    managedIdentityClientId: identity.outputs.clientId
     storageAccountName: storage.outputs.name
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     appConfigEndpoint: appConfig.outputs.endpoint

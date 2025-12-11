@@ -105,14 +105,14 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
   }
 }
 
-// Grant managed identity Data Contributor access
-resource dataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(cosmosAccount.id, managedIdentityPrincipalId, 'Cosmos DB Data Contributor')
-  scope: cosmosAccount
+// Grant managed identity Cosmos DB Data Contributor (data plane) access
+resource dataContributorSqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
+  parent: cosmosAccount
+  name: guid(cosmosAccount.id, managedIdentityPrincipalId, 'CosmosDBDataContributor')
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '00000000-0000-0000-0000-000000000002') // Cosmos DB Built-in Data Contributor
+    roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002' // Cosmos DB Built-in Data Contributor (data plane)
     principalId: managedIdentityPrincipalId
-    principalType: 'ServicePrincipal'
+    scope: cosmosAccount.id
   }
 }
 

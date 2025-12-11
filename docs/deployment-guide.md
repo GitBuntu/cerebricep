@@ -108,19 +108,23 @@ SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 # Get the service principal Object ID
 SP_OBJECT_ID=$(az ad sp show --id <app-id> --query id -o tsv)
 
-# Assign Contributor role at subscription level
+# Set the resource group name used for deployment
+RESOURCE_GROUP_NAME=<your-resource-group-name>
+
+# Assign Contributor role at resource group level (least privilege)
 az role assignment create \
   --assignee-object-id $SP_OBJECT_ID \
   --assignee-principal-type ServicePrincipal \
   --role "Contributor" \
-  --scope "/subscriptions/$SUBSCRIPTION_ID"
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_NAME"
 
-# Assign User Access Administrator for RBAC assignments
+# (Optional) Assign User Access Administrator at resource group level only if RBAC changes are required
+# Only run this if your pipeline needs to manage RBAC within the resource group
 az role assignment create \
   --assignee-object-id $SP_OBJECT_ID \
   --assignee-principal-type ServicePrincipal \
   --role "User Access Administrator" \
-  --scope "/subscriptions/$SUBSCRIPTION_ID"
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_NAME"
 ```
 
 ## Step 5: Configure GitHub Environments

@@ -48,13 +48,13 @@ Welcome, AI coding agents! This guide summarizes the essential knowledge and con
 - `/infra/environments/` — Environment-specific parameter files
 - `/.github/workflows/` — CI/CD pipeline definitions
 - `/.github/prompts/` — Reusable Copilot prompts
-- `/.github/chatmodes/` — Custom Copilot chat modes
+- `/.github/agents/` — Custom Copilot agents
 
 ---
 
 ## 6. Examples
 
-- **Adding a New Resource**: Create a new Bicep module in `/modules/`, reference it in the appropriate environment main Bicep file, and update parameters as needed.
+- **Adding a New Resource**: Create a new Bicep module in `/infra/modules/`, reference it in the appropriate environment main Bicep file, and update parameters as needed.
 - **Updating a Policy**: Modify the relevant Bicep in `/policy/require-tags/`, then redeploy using `policy/deploy.ps1`.
 
 ---
