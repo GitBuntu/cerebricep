@@ -9,7 +9,6 @@
 - **Tools**: Azure CLI, GitHub Actions
 - **Target**: Azure subscription-level deployments
 - **Environments**: dev, uat, prod (cost-optimized for each tier)
-- **Size**: ~2.5KB of Bicep code across 10 modules + main orchestration
 
 ## Project Architecture
 
