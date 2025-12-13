@@ -105,7 +105,7 @@ Every module:
    - Comments with `// ==== ... ====` section dividers
    - `@description()` decorator on every parameter
    - Output block with all relevant resource IDs/endpoints
-3. Add module deployment to `infra/main.bicep` with unique `name: 'resource-${uniqueString(deployment().name)}'`
+3. Add module deployment to `infra/main.bicep` with unique `name: 'modulename-${uniqueString(deployment().name)}'` (replace "modulename" with the actual module's function, e.g., "monitoring", "identity")
 4. Add outputs to `main.bicep` outputs block
 5. Run `az bicep build --file infra/main.bicep --stdout > /dev/null` to validate
 6. Update all three `*.bicepparam` files with new parameters
