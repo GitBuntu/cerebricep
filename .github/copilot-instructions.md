@@ -138,7 +138,7 @@ az bicep build --file {changed_bicep_file}
 
 - **Always deploy to resource group scope** in modules, not subscription scope
 - **Module dependencies**: Function App module depends on all 7 other modules (ensure outputs exist)
-- **Environment staging**: dev auto-deploys from main branch; uat/prod require manual workflow dispatch
+- **Recommended environment staging**: Configure dev to auto-deploy from main branch; require manual workflow dispatch for uat/prod
 - **No environment-specific bicep files** - use bicepparam for all variations
 - **Managed identity must be deployed first** - all other modules reference its outputs
 
