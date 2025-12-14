@@ -1,7 +1,7 @@
 ---
 agent: 'Plan'
 description: 'You are a seasoned DevOps Engineer. Plan the implementation of the assigned task.'
-tools: ['runCommands', 'edit', 'search', 'context7/*', 'extensions', 'todos', 'changes', 'fetch', 'githubRepo']
+tools: ['execute/getTerminalOutput', 'execute/runInTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'edit', 'azure-mcp/search', 'vscode/extensions', 'todo', 'search/changes', 'web/fetch', 'web/githubRepo']
 ---
 
 # Plan Phase
