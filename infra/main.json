@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "385919266756763142"
+      "templateHash": "13369840102535827245"
     }
   },
   "parameters": {
@@ -24,6 +24,13 @@
       "type": "string",
       "metadata": {
         "description": "Azure region for all resources"
+      }
+    },
+    "regionName": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Region name for resource naming (e.g., eastus, westus2)"
       }
     },
     "workloadName": {
@@ -85,17 +92,17 @@
     "resourceGroupName": "[format('rg-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
     "commonTags": "[union(parameters('tags'), createObject('environment', parameters('environment'), 'workload', parameters('workloadName'), 'managedBy', 'bicep'))]",
     "naming": {
-      "functionApp": "[format('func-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "appServicePlan": "[format('asp-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "storageAccount": "[take(format('st{0}{1}', replace(parameters('workloadName'), '-', ''), parameters('environment')), 24)]",
-      "cosmosDb": "[format('cosmos-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "keyVault": "[format('kv-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "appConfig": "[format('appcs-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "appInsights": "[format('appi-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "logAnalytics": "[format('log-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "docIntelligence": "[format('di-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "managedIdentity": "[format('id-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
-      "vnet": "[format('vnet-{0}-{1}', parameters('workloadName'), parameters('environment'))]"
+      "functionApp": "[format('func-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "appServicePlan": "[format('asp-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "storageAccount": "[take(format('st{0}{1}{2}001', replace(parameters('workloadName'), '-', ''), parameters('environment'), replace(parameters('regionName'), '-', '')), 24)]",
+      "cosmosDb": "[format('cosmos-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "keyVault": "[format('kv-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "appConfig": "[format('appcs-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "appInsights": "[format('appi-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "logAnalytics": "[format('log-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "docIntelligence": "[format('di-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "managedIdentity": "[format('id-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]",
+      "vnet": "[format('vnet-{0}-{1}-{2}-001', parameters('workloadName'), parameters('environment'), parameters('regionName'))]"
     }
   },
   "resources": [
