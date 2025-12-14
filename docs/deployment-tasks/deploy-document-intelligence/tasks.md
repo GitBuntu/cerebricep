@@ -79,23 +79,23 @@
   - [x] Log Analytics: `log-authpilot-dev-eastus-001` ✅
   - [x] Virtual Network: `vnet-authpilot-dev-eastus-001` ✅
 
-- [ ] Pre-Deployment Checks
-  - [ ] Create resource group: `rg-authpilot-dev-eastus-001`
-  - [ ] Verify GitHub secrets are correctly configured
-  - [ ] Verify branch protection rules allow GitHub Actions
-  - [ ] Test Bicep templates locally: `az bicep build --file infra/main.bicep`
+- [x] Pre-Deployment Checks
+  - [x] Create resource group: `rg-authpilot-dev-eastus-001`
+  - [x] Verify GitHub secrets are correctly configured
+  - [x] Verify branch protection rules allow GitHub Actions - NA for dev
+  - [x] Test Bicep templates locally: `az bicep build --file infra/main.bicep`
 
 - [ ] Deploy Infrastructure via GitHub Actions
   - [ ] Push changes to dev branch (triggers workflow)
   - [ ] Verify GitHub Actions workflow runs successfully
   - [ ] Check workflow logs for Bicep validation errors
   - [ ] Verify resource creation in Azure Portal:
-    - [ ] Resource group `rg-authpilot-dev` exists
-    - [ ] Function App `func-authpilot-dev` created
-    - [ ] Storage Account `st{workloadname}dev` created
-    - [ ] Cosmos DB `cosmos-authpilot-dev` created
-    - [ ] Key Vault `kv-authpilot-dev` created
-    - [ ] Application Insights `appi-authpilot-dev` created
+    - [ ] Resource group `rg-authpilot-dev-eastus-001` exists
+    - [ ] Function App `func-authpilot-dev-eastus-001` created
+    - [ ] Storage Account `st{workloadname}deveastus001` created
+    - [ ] Cosmos DB `cosmos-authpilot-dev-eastus-001` created
+    - [ ] Key Vault `kv-authpilot-dev-eastus-001` created
+    - [ ] Application Insights `appi-authpilot-dev-eastus-001` created
   - [ ] Confirm RBAC permissions are applied
   - [ ] Verify managed identity has Key Vault access
 
