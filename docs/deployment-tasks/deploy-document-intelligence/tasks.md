@@ -73,7 +73,7 @@
   - [x] Cosmos DB: `cosmos-authpilot-dev-eastus-001` ✅
   - [x] Key Vault: `kv-authpilot-dev-eastus-001` ✅
   - [x] Storage Account: `stauthorpilotdeveustus001` ✅
-  - [x] Resource Group: `rg-authpilot-dev` ✅
+  - [x] Resource Group: `rg-authpilot-dev-eastus-001` ✅
   - [x] App Insights: `appi-authpilot-dev-eastus-001` ✅
   - [x] Managed Identity: `id-authpilot-dev-eastus-001` ✅
   - [x] Log Analytics: `log-authpilot-dev-eastus-001` ✅

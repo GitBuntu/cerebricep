@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Defaults
-RESOURCE_GROUP_NAME=${1:-rg-authpilot-dev}
+RESOURCE_GROUP_NAME=${1:-rg-authpilot-dev-eastus-001}
 REGION=${2:-eastus2}
 
 echo -e "${YELLOW}=== Creating Azure Resource Group ===${NC}"
