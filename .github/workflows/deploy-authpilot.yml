@@ -49,10 +49,9 @@ jobs:
       - name: Deploy infrastructure
         run: |
           az deployment group create \
-            --resource-group rg-authpilot-dev \
+            --resource-group rg-authpilot-dev-eastus-001 \
             --template-file infra/main.bicep \
-            --parameters infra/workloads/authpilot/dev.bicepparam \
-            --region ${{ secrets.AZURE_REGION }}
+            --parameters infra/workloads/authpilot/dev.bicepparam
         continue-on-error: false
 
       - name: Upload deployment output
