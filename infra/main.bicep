@@ -16,6 +16,9 @@ param environment string
 @description('Azure region for all resources')
 param location string
 
+@description('Region name for resource naming (e.g., eastus, westus2)')
+param regionName string = 'eastus'
+
 @description('Workload name used for resource naming')
 @minLength(3)
 @maxLength(20)
@@ -53,19 +56,20 @@ var commonTags = union(tags, {
   managedBy: 'bicep'
 })
 
-// Naming convention
+// Naming convention (follows Azure Cloud Adoption Framework + Azure Resource Namer)
+// Pattern: <type>-<workload>-<environment>-<region>-<instance>
 var naming = {
-  functionApp: 'func-${workloadName}-${environment}'
-  appServicePlan: 'asp-${workloadName}-${environment}'
-  storageAccount: take('st${replace(workloadName, '-', '')}${environment}', 24)
-  cosmosDb: 'cosmos-${workloadName}-${environment}'
-  keyVault: 'kv-${workloadName}-${environment}'
-  appConfig: 'appcs-${workloadName}-${environment}'
-  appInsights: 'appi-${workloadName}-${environment}'
-  logAnalytics: 'log-${workloadName}-${environment}'
-  docIntelligence: 'di-${workloadName}-${environment}'
-  managedIdentity: 'id-${workloadName}-${environment}'
-  vnet: 'vnet-${workloadName}-${environment}'
+  functionApp: 'func-${workloadName}-${environment}-${regionName}-001'
+  appServicePlan: 'asp-${workloadName}-${environment}-${regionName}-001'
+  storageAccount: take('st${replace(workloadName, '-', '')}${environment}${replace(regionName, '-', '')}001', 24)
+  cosmosDb: 'cosmos-${workloadName}-${environment}-${regionName}-001'
+  keyVault: 'kv-${workloadName}-${environment}-${regionName}-001'
+  appConfig: 'appcs-${workloadName}-${environment}-${regionName}-001'
+  appInsights: 'appi-${workloadName}-${environment}-${regionName}-001'
+  logAnalytics: 'log-${workloadName}-${environment}-${regionName}-001'
+  docIntelligence: 'di-${workloadName}-${environment}-${regionName}-001'
+  managedIdentity: 'id-${workloadName}-${environment}-${regionName}-001'
+  vnet: 'vnet-${workloadName}-${environment}-${regionName}-001'
 }
 
 // ============================================================================

@@ -69,6 +69,25 @@ az bicep build-params --file infra/environments/dev.bicepparam --outfile dev.par
 
 ## Key Project Rules & Patterns
 
+### 🔒 CRITICAL SECURITY RULE: No Credentials in Tracked Files
+**NEVER add actual or example credentials/secrets to any file that is NOT in `.gitignore`.** This includes:
+- ❌ API keys, connection strings, UUIDs
+- ❌ Example credentials (even as placeholders like `12345678-abcd-...`)
+- ❌ Subscription IDs, Client IDs, Tenant IDs, Object IDs
+- ❌ Token examples or reference values that look like real credentials
+
+**What to do instead:**
+1. Reference `./scripts/setup-oidc.sh` output for credential documentation
+2. Use generic placeholders like `{YOUR_SUBSCRIPTION_ID}` or `your-app-id`
+3. Direct users to retrieve values from Azure CLI/GitHub Actions output
+4. Keep `.gitignore` updated to exclude files with real secrets
+
+**Files that should NEVER contain credentials:**
+- `docs/**/*.md` (all documentation)
+- `infra/**/*.bicep` and `infra/**/*.bicepparam`
+- `.github/workflows/**`
+- `scripts/**` (unless the script intentionally outputs secrets to terminal, not files)
+
 ### Naming Conventions (Bicep)
 - All resource names follow a strict pattern in `main.bicep`: `{resourceType}-{workloadName}-{environment}`
 - Storage account names: `st{workloadNameNoHyphens}{environment}` (no hyphens, max 24 chars)
