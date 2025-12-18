@@ -14,7 +14,7 @@ param tags = {
 // Cost-optimized sizing for dev (free tier where possible)
 param functionAppSku = 'Y1'           // Consumption plan - free tier (~1M executions/month)
 param cosmosDbThroughput = 100        // Free tier: 100 RU/s + 25 GB/month
-param docIntelligenceSku = 'F0'       // Free tier: 500 transactions/month
+param docIntelligenceSku = 'S0'       // Standard tier - pay
 
 // Dev doesn't need enterprise features
 param enablePrivateEndpoints = false

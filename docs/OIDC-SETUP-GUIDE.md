@@ -156,7 +156,7 @@ Go to GitHub repo → **Actions** → Watch the `Deploy AuthPilot Infrastructure
 ## What's Next?
 
 After OIDC is working:
-1. Create the resource group: `az group create --name rg-authpilot-dev --location eastus2`
+1. Create the resource group: `az group create --name rg-authpilot-dev-eastus-001 --location eastus2`
 2. Push to dev branch → GitHub Actions deploys infrastructure
 3. Check Azure Portal for created resources
 
