@@ -41,6 +41,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'dev' }}
     if: github.event_name == 'push' || github.event.inputs.environment != ''
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
       - name: Checkout code
