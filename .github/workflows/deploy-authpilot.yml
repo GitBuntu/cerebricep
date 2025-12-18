@@ -48,8 +48,8 @@ jobs:
 
       - name: Deploy infrastructure
         run: |
-          az deployment group create \
-            --resource-group rg-authpilot-dev-eastus-001 \
+          az deployment sub create \
+            --location eastus \
             --template-file infra/main.bicep \
             --parameters infra/workloads/authpilot/dev.bicepparam
         continue-on-error: false
