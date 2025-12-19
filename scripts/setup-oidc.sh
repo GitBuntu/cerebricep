@@ -100,24 +100,24 @@ echo "   Tenant ID: $TENANT_ID"
 echo ""
 
 # ============================================================================
-# STEP 4: Assign Contributor role to service principal
+# STEP 4: Assign User Access Administrator role to service principal
 # ============================================================================
-echo -e "${YELLOW}Step 4: Assigning Contributor role...${NC}"
+echo -e "${YELLOW}Step 4: Assigning User Access Administrator role...${NC}"
 
 # Check if role already assigned
 ROLE_EXISTS=$(az role assignment list \
   --assignee $SP_OBJECT_ID \
-  --role Contributor \
+  --role "User Access Administrator" \
   --scope /subscriptions/$SUBSCRIPTION_ID \
   --query "[0].id" -o tsv 2>/dev/null || echo "")
 
 if [ -z "$ROLE_EXISTS" ]; then
     az role assignment create \
-      --role Contributor \
+      --role "User Access Administrator" \
       --assignee-object-id $SP_OBJECT_ID \
       --assignee-principal-type ServicePrincipal \
       --scope /subscriptions/$SUBSCRIPTION_ID
-    echo -e "${GREEN}✅ Contributor role assigned${NC}"
+    echo -e "${GREEN}✅ User Access Administrator role assigned${NC}"
 else
     echo -e "${YELLOW}⚠️  Role already assigned${NC}"
 fi
