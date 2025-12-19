@@ -57,13 +57,13 @@ var commonTags = union(tags, {
 })
 
 // Naming convention (follows Azure Cloud Adoption Framework + Azure Resource Namer)
-// Pattern: <type>-<workload>-<environment>-<region>-<instance>
+// Pattern: <type>-<workload>-<environment>-<region>-<instance> (region omitted for global resources)
 var naming = {
   functionApp: 'func-${workloadName}-${environment}-${regionName}-001'
   appServicePlan: 'asp-${workloadName}-${environment}-${regionName}-001'
   storageAccount: take('st${replace(workloadName, '-', '')}${environment}${replace(regionName, '-', '')}001', 24)
   cosmosDb: 'cosmos-${workloadName}-${environment}-${regionName}-001'
-  keyVault: 'kv-${workloadName}-${environment}-${regionName}-001'
+  keyVault: 'kv-${workloadName}-${environment}-001'
   appConfig: 'appcs-${workloadName}-${environment}-${regionName}-001'
   appInsights: 'appi-${workloadName}-${environment}-${regionName}-001'
   logAnalytics: 'log-${workloadName}-${environment}-${regionName}-001'
