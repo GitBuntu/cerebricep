@@ -160,18 +160,18 @@ module appConfig './modules/config/app-configuration.bicep' = {
   }
 }
 
-// Document Intelligence
-module docIntelligence './modules/ai/document-intelligence.bicep' = {
-  scope: rg
-  name: 'docintelligence-${uniqueString(deployment().name)}'
-  params: {
-    name: naming.docIntelligence
-    location: location
-    tags: commonTags
-    sku: docIntelligenceSku
-    managedIdentityId: identity.outputs.id
-  }
-}
+// Document Intelligence - Using existing free tier resource
+// module docIntelligence './modules/ai/document-intelligence.bicep' = {
+//   scope: rg
+//   name: 'docintelligence-${uniqueString(deployment().name)}'
+//   params: {
+//     name: naming.docIntelligence
+//     location: location
+//     tags: commonTags
+//     sku: docIntelligenceSku
+//     managedIdentityId: identity.outputs.id
+//   }
+// }
 
 // Function App
 module functionApp './modules/compute/function-app.bicep' = {
@@ -202,4 +202,4 @@ output functionAppHostname string = functionApp.outputs.hostname
 output keyVaultUri string = keyVault.outputs.uri
 output cosmosDbEndpoint string = cosmosDb.outputs.endpoint
 output appConfigEndpoint string = appConfig.outputs.endpoint
-output docIntelligenceEndpoint string = docIntelligence.outputs.endpoint
+output docIntelligenceEndpoint string = 'https://faxmaster.cognitiveservices.azure.com/' // Manually configure to point to faxmaster
