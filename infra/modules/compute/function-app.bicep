@@ -69,57 +69,63 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   }
 }
 
+// Site config base (common to all SKUs)
+var siteConfigBase = {
+  ftpsState: 'Disabled'
+  minTlsVersion: '1.2'
+  http20Enabled: true
+  cors: {
+    allowedOrigins: [
+      'https://portal.azure.com'
+    ]
+  }
+  appSettings: [
+    {
+      name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+      value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+    }
+    {
+      name: 'AzureWebJobsStorage'
+      value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+    }
+    {
+      name: 'FUNCTIONS_EXTENSION_VERSION'
+      value: '~4'
+    }
+    {
+      name: 'FUNCTIONS_WORKER_RUNTIME'
+      value: runtime
+    }
+    {
+      name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+      value: appInsightsConnectionString
+    }
+    {
+      name: 'APP_CONFIGURATION_ENDPOINT'
+      value: appConfigEndpoint
+    }
+    {
+      name: 'KEY_VAULT_URI'
+      value: keyVaultUri
+    }
+    {
+      name: 'AZURE_CLIENT_ID'
+      value: managedIdentityClientId
+    }
+  ]
+}
+
+// For Flex, omit linuxFxVersion (it's in functionAppConfig.runtime instead)
+// For other plans, include linuxFxVersion
+var siteConfig = isFlex ? siteConfigBase : union(siteConfigBase, { linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}' })
+
 // Base properties for Function App
 var functionAppBaseProperties = {
   serverFarmId: appServicePlan.id
   httpsOnly: true
   publicNetworkAccess: 'Enabled'
   clientAffinityEnabled: false
-  siteConfig: {
-    linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}'
-    ftpsState: 'Disabled'
-    minTlsVersion: '1.2'
-    http20Enabled: true
-    cors: {
-      allowedOrigins: [
-        'https://portal.azure.com'
-      ]
-    }
-    appSettings: [
-      {
-        name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
-        value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-      }
-      {
-        name: 'AzureWebJobsStorage'
-        value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-      }
-      {
-        name: 'FUNCTIONS_EXTENSION_VERSION'
-        value: '~4'
-      }
-      {
-        name: 'FUNCTIONS_WORKER_RUNTIME'
-        value: runtime
-      }
-      {
-        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-        value: appInsightsConnectionString
-      }
-      {
-        name: 'APP_CONFIGURATION_ENDPOINT'
-        value: appConfigEndpoint
-      }
-      {
-        name: 'KEY_VAULT_URI'
-        value: keyVaultUri
-      }
-      {
-        name: 'AZURE_CLIENT_ID'
-        value: managedIdentityClientId
-      }
-    ]
-  }
+  siteConfig: siteConfig
 }
 
 // Flex-specific properties
