@@ -183,6 +183,7 @@ module functionApp './modules/compute/function-app.bicep' = {
     managedIdentityId: identity.outputs.id
     managedIdentityClientId: identity.outputs.clientId
     storageAccountName: storage.outputs.name
+    storageAccountId: storage.outputs.id
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     appConfigEndpoint: appConfig.outputs.endpoint
     keyVaultUri: keyVault.outputs.uri

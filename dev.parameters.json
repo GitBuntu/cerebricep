@@ -22,7 +22,7 @@
       }
     },
     "functionAppSku": {
-      "value": "Y1"
+      "value": "Flex"
     },
     "cosmosDbThroughput": {
       "value": 400
