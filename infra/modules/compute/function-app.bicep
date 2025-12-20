@@ -69,6 +69,86 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   }
 }
 
+// Base properties for Function App
+var functionAppBaseProperties = {
+  serverFarmId: appServicePlan.id
+  httpsOnly: true
+  publicNetworkAccess: 'Enabled'
+  clientAffinityEnabled: false
+  siteConfig: {
+    linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}'
+    ftpsState: 'Disabled'
+    minTlsVersion: '1.2'
+    http20Enabled: true
+    cors: {
+      allowedOrigins: [
+        'https://portal.azure.com'
+      ]
+    }
+    appSettings: [
+      {
+        name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+        value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+      }
+      {
+        name: 'AzureWebJobsStorage'
+        value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+      }
+      {
+        name: 'FUNCTIONS_EXTENSION_VERSION'
+        value: '~4'
+      }
+      {
+        name: 'FUNCTIONS_WORKER_RUNTIME'
+        value: runtime
+      }
+      {
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+        value: appInsightsConnectionString
+      }
+      {
+        name: 'APP_CONFIGURATION_ENDPOINT'
+        value: appConfigEndpoint
+      }
+      {
+        name: 'KEY_VAULT_URI'
+        value: keyVaultUri
+      }
+      {
+        name: 'AZURE_CLIENT_ID'
+        value: managedIdentityClientId
+      }
+    ]
+  }
+}
+
+// Flex-specific properties
+var functionAppFlexConfig = {
+  functionAppConfig: {
+    deployment: {
+      storage: {
+        type: 'blobContainer'
+        value: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/'
+        authentication: {
+          type: 'StorageAccountConnectionString'
+          storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+        }
+      }
+    }
+    scaleAndConcurrency: {
+      maximumInstanceCount: 100
+      instanceMemoryMB: 2048
+    }
+    runtime: {
+      name: runtime
+      version: runtimeVersion
+    }
+  }
+}
+
+// Merge Flex config into base properties if needed
+var functionAppProperties = isFlex ? union(functionAppBaseProperties, functionAppFlexConfig) : functionAppBaseProperties
+
 // Function App
 resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   name: functionAppName
@@ -81,77 +161,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
       '${managedIdentityId}': {}
     }
   }
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    publicNetworkAccess: 'Enabled'
-    clientAffinityEnabled: false
-    functionAppConfig: isFlex ? {
-      deployment: {
-        storage: {
-          type: 'blobContainer'
-          value: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/'
-          authentication: {
-            type: 'StorageAccountConnectionString'
-            storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
-          }
-        }
-      }
-      scaleAndConcurrency: {
-        maximumInstanceCount: 100
-        instanceMemoryMB: 2048
-      }
-      runtime: {
-        name: runtime
-        version: runtimeVersion
-      }
-    } : null
-    siteConfig: {
-      linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}'
-      ftpsState: 'Disabled'
-      minTlsVersion: '1.2'
-      http20Enabled: true
-      cors: {
-        allowedOrigins: [
-          'https://portal.azure.com'
-        ]
-      }
-      appSettings: [
-        {
-          name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-        }
-        {
-          name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: runtime
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsightsConnectionString
-        }
-        {
-          name: 'APP_CONFIGURATION_ENDPOINT'
-          value: appConfigEndpoint
-        }
-        {
-          name: 'KEY_VAULT_URI'
-          value: keyVaultUri
-        }
-        {
-          name: 'AZURE_CLIENT_ID'
-          value: managedIdentityClientId
-        }
-      ]
-    }
-  }
+  properties: functionAppProperties
 }
 
 // Disable basic publishing credentials (SCM)
