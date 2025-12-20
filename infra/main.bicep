@@ -34,10 +34,6 @@ param functionAppSku string = 'Y1'
 @description('Cosmos DB provisioned throughput (RU/s)')
 param cosmosDbThroughput int = 400
 
-@description('Document Intelligence SKU')
-@allowed(['F0', 'S0'])
-param docIntelligenceSku string = 'S0'
-
 // Feature flags
 @description('Enable private endpoints for PaaS services')
 param enablePrivateEndpoints bool = false
