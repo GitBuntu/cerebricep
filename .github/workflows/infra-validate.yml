@@ -1,12 +1,8 @@
 name: Validate Infrastructure
 
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'infra/**'
-      - 'bicepconfig.json'
-      - '.github/workflows/infra-validate.yml'
+  # Main branch is passive - no automatic validation
+  workflow_dispatch:
 
 jobs:
   validate:
