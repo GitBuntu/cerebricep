@@ -16,6 +16,9 @@ param environment string
 @description('Azure region for all resources')
 param location string
 
+@description('Region name for resource naming (e.g., eastus, westus2)')
+param regionName string = 'eastus'
+
 @description('Workload name used for resource naming')
 @minLength(3)
 @maxLength(20)
@@ -31,10 +34,6 @@ param functionAppSku string = 'Y1'
 @description('Cosmos DB provisioned throughput (RU/s)')
 param cosmosDbThroughput int = 400
 
-@description('Document Intelligence SKU')
-@allowed(['F0', 'S0'])
-param docIntelligenceSku string = 'S0'
-
 // Feature flags
 @description('Enable private endpoints for PaaS services')
 param enablePrivateEndpoints bool = false
@@ -47,25 +46,27 @@ param enableZoneRedundancy bool = false
 // ============================================================================
 
 var resourceGroupName = 'rg-${workloadName}-${environment}'
+var deploymentSuffix = environment == 'dev' ? take(uniqueString(deployment().name), 5) : '001'
 var commonTags = union(tags, {
   environment: environment
   workload: workloadName
   managedBy: 'bicep'
 })
 
-// Naming convention
+// Naming convention (follows Azure Cloud Adoption Framework + Azure Resource Namer)
+// Pattern: <type>-<workload>-<environment>-<region>-<instance> (region omitted for global resources)
 var naming = {
-  functionApp: 'func-${workloadName}-${environment}'
-  appServicePlan: 'asp-${workloadName}-${environment}'
-  storageAccount: take('st${replace(workloadName, '-', '')}${environment}', 24)
-  cosmosDb: 'cosmos-${workloadName}-${environment}'
-  keyVault: 'kv-${workloadName}-${environment}'
-  appConfig: 'appcs-${workloadName}-${environment}'
-  appInsights: 'appi-${workloadName}-${environment}'
-  logAnalytics: 'log-${workloadName}-${environment}'
-  docIntelligence: 'di-${workloadName}-${environment}'
-  managedIdentity: 'id-${workloadName}-${environment}'
-  vnet: 'vnet-${workloadName}-${environment}'
+  functionApp: 'func-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  appServicePlan: 'asp-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  storageAccount: take('st${replace(workloadName, '-', '')}${environment}${replace(regionName, '-', '')}${deploymentSuffix}', 24)
+  cosmosDb: 'cosmos-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  keyVault: 'kv-${workloadName}-${environment}-${deploymentSuffix}'
+  appConfig: 'appcs-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  appInsights: 'appi-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  logAnalytics: 'log-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  docIntelligence: 'di-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  managedIdentity: 'id-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
+  vnet: 'vnet-${workloadName}-${environment}-${regionName}-${deploymentSuffix}'
 }
 
 // ============================================================================
@@ -156,18 +157,18 @@ module appConfig './modules/config/app-configuration.bicep' = {
   }
 }
 
-// Document Intelligence
-module docIntelligence './modules/ai/document-intelligence.bicep' = {
-  scope: rg
-  name: 'docintelligence-${uniqueString(deployment().name)}'
-  params: {
-    name: naming.docIntelligence
-    location: location
-    tags: commonTags
-    sku: docIntelligenceSku
-    managedIdentityId: identity.outputs.id
-  }
-}
+// Document Intelligence - Using existing free tier resource
+// module docIntelligence './modules/ai/document-intelligence.bicep' = {
+//   scope: rg
+//   name: 'docintelligence-${uniqueString(deployment().name)}'
+//   params: {
+//     name: naming.docIntelligence
+//     location: location
+//     tags: commonTags
+//     sku: docIntelligenceSku
+//     managedIdentityId: identity.outputs.id
+//   }
+// }
 
 // Function App
 module functionApp './modules/compute/function-app.bicep' = {
@@ -182,6 +183,7 @@ module functionApp './modules/compute/function-app.bicep' = {
     managedIdentityId: identity.outputs.id
     managedIdentityClientId: identity.outputs.clientId
     storageAccountName: storage.outputs.name
+    storageAccountId: storage.outputs.id
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     appConfigEndpoint: appConfig.outputs.endpoint
     keyVaultUri: keyVault.outputs.uri
@@ -198,4 +200,4 @@ output functionAppHostname string = functionApp.outputs.hostname
 output keyVaultUri string = keyVault.outputs.uri
 output cosmosDbEndpoint string = cosmosDb.outputs.endpoint
 output appConfigEndpoint string = appConfig.outputs.endpoint
-output docIntelligenceEndpoint string = docIntelligence.outputs.endpoint
+output docIntelligenceEndpoint string = 'https://faxmaster.cognitiveservices.azure.com/' // Manually configure to point to faxmaster

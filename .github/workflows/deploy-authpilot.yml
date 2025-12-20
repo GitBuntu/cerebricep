@@ -1,0 +1,63 @@
+name: Deploy AuthPilot Infrastructure
+
+on:
+  push:
+    branches: [ dev ]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/deploy-authpilot.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate Bicep Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upgrade Bicep
+        run: az bicep upgrade
+
+      - name: Validate main Bicep template
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
+        
+      - name: Validate authpilot-dev parameters
+        run: az bicep build-params --file infra/workloads/authpilot/dev.bicepparam --outfile /dev/null
+
+  deploy-dev:
+    name: Deploy to Development
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    environment: dev
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure
+        run: |
+          az deployment sub create \
+            --location eastus \
+            --template-file infra/main.bicep \
+            --parameters infra/workloads/authpilot/dev.bicepparam
+        continue-on-error: false
+
+      - name: Upload deployment output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-dev-output
+          path: deployment-output.json
+          if-no-files-found: ignore
