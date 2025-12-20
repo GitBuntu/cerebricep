@@ -69,8 +69,51 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   }
 }
 
-// Site config base (common to all SKUs)
-var siteConfigBase = {
+// Common app settings (excluding runtime-specific ones that vary by plan)
+var baseAppSettings = [
+  {
+    name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+  }
+  {
+    name: 'AzureWebJobsStorage'
+    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+  }
+  {
+    name: 'FUNCTIONS_EXTENSION_VERSION'
+    value: '~4'
+  }
+  {
+    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+    value: appInsightsConnectionString
+  }
+  {
+    name: 'APP_CONFIGURATION_ENDPOINT'
+    value: appConfigEndpoint
+  }
+  {
+    name: 'KEY_VAULT_URI'
+    value: keyVaultUri
+  }
+  {
+    name: 'AZURE_CLIENT_ID'
+    value: managedIdentityClientId
+  }
+]
+
+// For standard plans, add FUNCTIONS_WORKER_RUNTIME
+var appSettingsStandard = concat(baseAppSettings, [
+  {
+    name: 'FUNCTIONS_WORKER_RUNTIME'
+    value: runtime
+  }
+])
+
+// For Flex, omit FUNCTIONS_WORKER_RUNTIME (it's specified in functionAppConfig.runtime)
+var appSettingsFlex = baseAppSettings
+
+// SiteConfig for Flex (no linuxFxVersion, no FUNCTIONS_WORKER_RUNTIME)
+var siteConfigFlex = {
   ftpsState: 'Disabled'
   minTlsVersion: '1.2'
   http20Enabled: true
@@ -79,45 +122,24 @@ var siteConfigBase = {
       'https://portal.azure.com'
     ]
   }
-  appSettings: [
-    {
-      name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
-      value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-    }
-    {
-      name: 'AzureWebJobsStorage'
-      value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-    }
-    {
-      name: 'FUNCTIONS_EXTENSION_VERSION'
-      value: '~4'
-    }
-    {
-      name: 'FUNCTIONS_WORKER_RUNTIME'
-      value: runtime
-    }
-    {
-      name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-      value: appInsightsConnectionString
-    }
-    {
-      name: 'APP_CONFIGURATION_ENDPOINT'
-      value: appConfigEndpoint
-    }
-    {
-      name: 'KEY_VAULT_URI'
-      value: keyVaultUri
-    }
-    {
-      name: 'AZURE_CLIENT_ID'
-      value: managedIdentityClientId
-    }
-  ]
+  appSettings: appSettingsFlex
 }
 
-// For Flex, omit linuxFxVersion (it's in functionAppConfig.runtime instead)
-// For other plans, include linuxFxVersion
-var siteConfig = isFlex ? siteConfigBase : union(siteConfigBase, { linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}' })
+// SiteConfig for non-Flex (includes linuxFxVersion and FUNCTIONS_WORKER_RUNTIME)
+var siteConfigStandard = {
+  linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}'
+  ftpsState: 'Disabled'
+  minTlsVersion: '1.2'
+  http20Enabled: true
+  cors: {
+    allowedOrigins: [
+      'https://portal.azure.com'
+    ]
+  }
+  appSettings: appSettingsStandard
+}
+
+var siteConfig = isFlex ? siteConfigFlex : siteConfigStandard
 
 // Base properties for Function App
 var functionAppBaseProperties = {
