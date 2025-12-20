@@ -51,6 +51,7 @@ var isConsumption = sku == 'Y1'
 var isFlex = sku == 'Flex'
 var planKind = isConsumption ? 'functionapp' : 'elastic'
 var skuTier = isConsumption ? 'Dynamic' : (isFlex ? 'FlexConsumption' : 'ElasticPremium')
+var skuName = isFlex ? 'FC1' : sku
 
 // App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
@@ -59,7 +60,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   tags: tags
   kind: planKind
   sku: {
-    name: sku
+    name: skuName
     tier: skuTier
   }
   properties: {
