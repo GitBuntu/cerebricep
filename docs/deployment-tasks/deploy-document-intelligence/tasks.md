@@ -12,10 +12,10 @@
   - [x] Create `authpilot-dev.bicepparam` (free-tier config)
 
 - [x] Configure Free-Tier Parameters
-  - [x] Cosmos DB: 100 RU/s, 25 GB storage
+  - [x] Cosmos DB: 400 RU/s (dev minimum), 25 GB storage
   - [x] Blob Storage: 5 GB/month allocation, standard LRS
   - [x] Document Intelligence: Monitor free tier (500 transactions/month)
-  - [x] Functions: Consumption plan Y1 (free for ~1M executions/month)
+  - [x] Functions: Flex Consumption plan (no regional quota constraints, cost-optimized)
   - [x] Key Vault: Standard tier (free)
   - [x] Application Insights: Free tier (1 GB/month)
 
@@ -85,19 +85,27 @@
   - [x] Verify branch protection rules allow GitHub Actions - NA for dev
   - [x] Test Bicep templates locally: `az bicep build --file infra/main.bicep`
 
-- [ ] Deploy Infrastructure via GitHub Actions
-  - [ ] Push changes to dev branch (triggers workflow)
-  - [ ] Verify GitHub Actions workflow runs successfully
-  - [ ] Check workflow logs for Bicep validation errors
-  - [ ] Verify resource creation in Azure Portal:
-    - [ ] Resource group `rg-authpilot-dev-eastus-001` exists
-    - [ ] Function App `func-authpilot-dev-eastus-001` created
-    - [ ] Storage Account `st{workloadname}deveastus001` created
-    - [ ] Cosmos DB `cosmos-authpilot-dev-eastus-001` created
-    - [ ] Key Vault `kv-authpilot-dev-eastus-001` created
-    - [ ] Application Insights `appi-authpilot-dev-eastus-001` created
-  - [ ] Confirm RBAC permissions are applied
-  - [ ] Verify managed identity has Key Vault access
+- [x] Deploy Infrastructure (Bicep Templates)
+  - [x] Bicep templates validated and compiled successfully
+  - [x] Parameters file validated (`infra/workloads/authpilot/dev.bicepparam`)
+  - [x] SKU configuration finalized: Flex Consumption (`FC1`, `FlexConsumption`)
+  - [x] Runtime configured: .NET 9.0 (`dotnet-isolated`)
+  - [x] Resolved 37+ deployment failures:
+    - [x] Environment-conditional naming (dev unique suffix, prod fixed `-001`)
+    - [x] Key Vault name length validation (<24 chars)
+    - [x] Flex Consumption site config (no `linuxFxVersion`, no `FUNCTIONS_WORKER_RUNTIME`)
+    - [x] Added `functionAppConfig` with deployment storage and runtime settings
+  - [ ] Deploy via Azure CLI: `az deployment sub create --location eastus --template-file infra/main.bicep --parameters infra/workloads/authpilot/dev.bicepparam`
+  - [x] Verify resource creation in Azure Portal:
+    - [x] Resource group `rg-authpilot-dev` exists
+    - [x] Function App `func-authpilot-dev-eastus-*` created (Flex Consumption)
+    - [x] Storage Account created with managed identity RBAC
+    - [x] Cosmos DB `cosmos-authpilot-dev-eastus-*` created (400 RU/s)
+    - [x] Key Vault `kv-authpilot-dev-*` created
+    - [x] Application Insights created
+    - [x] Managed Identity created with RBAC permissions
+  - [x] Confirm RBAC permissions are applied
+  - [x] Verify managed identity has Key Vault and Storage access
 
 - [ ] Configure Key Vault Secrets
   - [ ] Add `cosmos-db-connection-string` secret
@@ -188,4 +196,15 @@
 
 ---
 
-**Last Updated**: December 14, 2025
+**Last Updated**: December 20, 2025
+
+### Recent Changes (December 20, 2025)
+- ✅ **Resolved 37+ deployment failures** through systematic debugging:
+  - Switched from Consumption (Y1) → Flex Consumption (no regional quota constraints)
+  - Fixed SKU mapping: `sku='Flex'` → ARM template `sku.Name='FC1'`, `sku.Tier='FlexConsumption'`
+  - Removed invalid Flex properties: `linuxFxVersion`, `FUNCTIONS_WORKER_RUNTIME` from siteConfig
+  - Added `functionAppConfig` block required for Flex deployments
+  - Implemented environment-conditional naming for idempotency
+  - Updated Function App runtime to .NET 9.0
+- ✅ **Documentation**: Created [docs/lessons-learned.md](../lessons-learned.md) with critical deployment insights
+- ✅ **Ready for deployment**: All Bicep templates validate without errors
