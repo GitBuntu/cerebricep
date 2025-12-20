@@ -86,6 +86,26 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     httpsOnly: true
     publicNetworkAccess: 'Enabled'
     clientAffinityEnabled: false
+    functionAppConfig: isFlex ? {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/'
+          authentication: {
+            type: 'StorageAccountConnectionString'
+            storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+          }
+        }
+      }
+      scaleAndConcurrency: {
+        maximumInstanceCount: 100
+        instanceMemoryMB: 2048
+      }
+      runtime: {
+        name: runtime
+        version: runtimeVersion
+      }
+    } : null
     siteConfig: {
       linuxFxVersion: '${toUpper(runtime)}|${runtimeVersion}'
       ftpsState: 'Disabled'
