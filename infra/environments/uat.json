@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "uat"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "workloadName": {
+      "value": "cerebricep"
+    },
+    "tags": {
+      "value": {
+        "project": "cerebricep",
+        "costCenter": "testing"
+      }
+    },
+    "documentDbAdminPassword": {
+      "value": "UATPassword123!"
+    },
+    "documentDbComputeTier": {
+      "value": "M30"
+    },
+    "documentDbStorageSizeGb": {
+      "value": 64
+    },
+    "documentDbEnableHighAvailability": {
+      "value": false
+    }
+  }
+}

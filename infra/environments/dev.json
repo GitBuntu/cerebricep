@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "workloadName": {
+      "value": "cerebricep"
+    },
+    "tags": {
+      "value": {
+        "project": "cerebricep",
+        "costCenter": "development"
+      }
+    },
+    "documentDbAdminPassword": {
+      "value": "DevPassword123!"
+    },
+    "documentDbComputeTier": {
+      "value": "M10"
+    },
+    "documentDbStorageSizeGb": {
+      "value": 32
+    },
+    "documentDbEnableHighAvailability": {
+      "value": false
+    }
+  }
+}

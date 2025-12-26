@@ -9,7 +9,7 @@ param tags = {
   costCenter: 'production'
 }
 
-param documentDbAdminPassword = ''
+param documentDbAdminPassword = '{GITHUB_SECRET_DOCUMENTDB_ADMIN_PASSWORD_PROD}'
 param documentDbComputeTier = 'M50'
 param documentDbStorageSizeGb = 256
 param documentDbEnableHighAvailability = true
