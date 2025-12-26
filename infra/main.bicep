@@ -45,7 +45,6 @@ param documentDbEnableHighAvailability bool = false
 // ============================================================================
 
 var resourceGroupName = 'rg-${workloadName}-${environment}'
-var deploymentSuffix = environment == 'dev' ? take(uniqueString(deployment().name), 5) : '001'
 var commonTags = union(tags, {
   environment: environment
   workload: workloadName
