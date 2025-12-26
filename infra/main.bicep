@@ -52,7 +52,7 @@ var commonTags = union(tags, {
 })
 
 var naming = {
-  documentDb: 'mongoDb-${workloadName}-${environment}'
+  documentDb: 'mongodb-${workloadName}-${environment}'
 }
 
 // ============================================================================
