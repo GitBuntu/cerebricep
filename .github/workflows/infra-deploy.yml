@@ -62,7 +62,7 @@ jobs:
             --location ${{ secrets.AZURE_REGION }} \
             --template-file infra/main.bicep \
             --parameters infra/environments/${{ github.event.inputs.environment || 'dev' }}.bicepparam \
-            --name "cerebricep-${{ github.event.inputs.environment || 'dev' }}-${{ github.run_number }}" \
+            --name "cerebricep-${{ secrets.AZURE_REGION }}-${{ github.event.inputs.environment || 'dev' }}-${{ github.run_number }}" \
             --output json > deployment-output.json
 
       - name: Upload deployment output
