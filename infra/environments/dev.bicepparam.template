@@ -9,7 +9,7 @@ param tags = {
   costCenter: 'development'
 }
 
-param documentDbAdminPassword = ''
+param documentDbAdminPassword = '{GITHUB_SECRET_DOCUMENTDB_ADMIN_PASSWORD_DEV}'
 param documentDbComputeTier = 'M10'
 param documentDbStorageSizeGb = 32
 param documentDbEnableHighAvailability = false

@@ -17,13 +17,16 @@
         "costCenter": "testing"
       }
     },
-    "cosmosDbThroughput": {
-      "value": 1000
+    "documentDbAdminPassword": {
+      "value": "UATPassword123!"
     },
-    "mongoServerVersion": {
-      "value": "4.2"
+    "documentDbComputeTier": {
+      "value": "M30"
     },
-    "enableZoneRedundancy": {
+    "documentDbStorageSizeGb": {
+      "value": 64
+    },
+    "documentDbEnableHighAvailability": {
       "value": false
     }
   }
