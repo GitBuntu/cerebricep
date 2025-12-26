@@ -9,11 +9,6 @@ param tags = {
   costCenter: 'production'
 }
 
-// Production sizing (performance + reliability)
-param functionAppSku = 'EP2'          // Elastic Premium (larger)
-param cosmosDbThroughput = 4000       // Production throughput
-param docIntelligenceSku = 'S0'       // Standard tier
-
-// Full enterprise features
-param enablePrivateEndpoints = true
+param cosmosDbThroughput = 4000
+param mongoServerVersion = '4.2'
 param enableZoneRedundancy = true

@@ -9,11 +9,6 @@ param tags = {
   costCenter: 'development'
 }
 
-// Cost-optimized sizing for dev
-param functionAppSku = 'Y1'           // Consumption plan
-param cosmosDbThroughput = 400        // Minimum RU/s
-param docIntelligenceSku = 'F0'       // Free tier
-
-// Dev doesn't need enterprise features
-param enablePrivateEndpoints = false
+param cosmosDbThroughput = 400
+param mongoServerVersion = '4.2'
 param enableZoneRedundancy = false

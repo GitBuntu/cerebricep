@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "workloadName": {
+      "value": "cerebricep"
+    },
+    "tags": {
+      "value": {
+        "project": "cerebricep",
+        "costCenter": "production"
+      }
+    },
+    "cosmosDbThroughput": {
+      "value": 4000
+    },
+    "mongoServerVersion": {
+      "value": "4.2"
+    },
+    "enableZoneRedundancy": {
+      "value": true
+    }
+  }
+}
