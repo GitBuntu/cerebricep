@@ -1,1 +1,3 @@
 /.vscode
+infra/environments/*.bicepparam
+!infra/environments/*.bicepparam.template
