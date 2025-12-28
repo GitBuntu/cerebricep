@@ -185,7 +185,10 @@ To adapt rulesets for your workflow:
 
 ### Status check not found
 - Ensure the workflow job name matches the status check context exactly
+  - The context name comes from the workflow job name (e.g., `jobs.validate.name`)
+  - You can explicitly set it using the `name` field in the job definition
 - Check that the workflow runs on pull requests
+- Verify the status check has completed at least once on a PR
 
 ### File path restriction not working
 - Verify file paths use the correct format

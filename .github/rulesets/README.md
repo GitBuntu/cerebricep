@@ -17,6 +17,7 @@ Rulesets define whether collaborators can delete or force push and set requireme
 - ✅ Requires code owner review
 - ✅ Dismisses stale reviews on push
 - ✅ Requires "Validate Bicep Templates" status check to pass
+- ℹ️ Does not require strict status checks (allows merging without re-running checks after base branch updates for flexibility)
 - ✅ Blocks deletion of the branch
 - ✅ Blocks force pushes
 - ✅ Requires linear commit history
@@ -36,6 +37,7 @@ Rulesets define whether collaborators can delete or force push and set requireme
 **Protections:**
 - ✅ Requires pull request with 1 approval for protected paths
 - ✅ Requires code owner review
+- ✅ Dismisses stale reviews on push to ensure reviews remain valid after changes
 - ✅ Restricts direct pushes to critical files
 
 **Purpose:** Prevents unauthorized or accidental changes to CI/CD pipelines and critical infrastructure configurations.
