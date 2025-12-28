@@ -12,7 +12,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # Skip deployment if this commit is part of a PR targeting main
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
     permissions:
       id-token: write
       contents: read
