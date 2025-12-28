@@ -91,6 +91,7 @@ Pushing to `main` automatically deploys to the **dev** environment.
 - **Key Vault** - Application secrets stored in Key Vault
 - **RBAC** - Role-based access control throughout
 - **Private Endpoints** - Available for UAT/Prod (configurable)
+- **Branch Protection** - Repository rulesets protect important branches from deletion, force pushes, and enforce PR requirements
 
 ## 🏷️ Environment Differences
 
@@ -116,6 +117,15 @@ Pull requests automatically trigger:
 - **Bicep Linting** - Syntax and best practice checks
 - **What-If Analysis** - Preview of changes
 - **Security Scan** - Checkov security analysis
+
+## 🛡️ Branch Protection
+
+Repository rulesets enforce quality and security standards:
+- **Main Branch** - Requires PR approval, code owner review, and passing status checks
+- **CI/CD Protection** - Restricts changes to workflow files and critical infrastructure
+- **Release Branches** - Higher approval requirements for production-bound code
+
+See [.github/rulesets/README.md](.github/rulesets/README.md) for detailed ruleset documentation.
 
 ## 📚 Documentation
 
