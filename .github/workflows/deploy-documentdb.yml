@@ -11,6 +11,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Skip deployment if this commit is part of a PR targeting main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     permissions:
       id-token: write
       contents: read
@@ -58,7 +60,9 @@ jobs:
 
       - name: Deploy DocumentDB
         run: |
+          DEPLOYMENT_NAME="documentdb-${{ steps.env.outputs.ENVIRONMENT }}-$(date +%s)"
           az deployment sub create \
+            --name $DEPLOYMENT_NAME \
             --template-file infra/main.bicep \
             --parameters infra/environments/${{ steps.env.outputs.ENVIRONMENT }}.bicepparam \
             --location ${{ env.AZURE_REGION }}
