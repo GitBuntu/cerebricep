@@ -63,7 +63,7 @@ Use the GitHub REST API to programmatically import rulesets:
 ```bash
 # Set variables
 REPO_OWNER="your-org"
-REPO_NAME="cerebricep"
+REPO_NAME="your-repo-name"
 RULESET_FILE=".github/rulesets/main-branch-protection.json"
 
 # Import ruleset
@@ -82,7 +82,7 @@ You can also manage rulesets with Terraform:
 ```hcl
 resource "github_repository_ruleset" "main_protection" {
   name        = "Main Branch Protection"
-  repository  = "cerebricep"
+  repository  = var.repository_name  # or "your-repository-name"
   target      = "branch"
   enforcement = "active"
 
