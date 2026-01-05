@@ -19,11 +19,11 @@ jobs:
       - name: Upgrade Bicep
         run: az bicep upgrade
 
-      - name: Validate main Bicep template
-        run: az bicep build --file infra/main.bicep --stdout > /dev/null
+      - name: Validate authpilot Bicep template
+        run: az bicep build --file infra/workloads/authpilot/main.bicep --stdout > /dev/null
         
       - name: Validate authpilot-dev parameters
-        run: az bicep build-params --file infra/workloads/authpilot/dev.bicepparam --outfile /dev/null
+        run: az bicep build-params --file infra/workloads/authpilot/environments/dev.bicepparam --outfile /dev/null
 
   deploy-dev:
     name: Deploy to Development
@@ -50,8 +50,8 @@ jobs:
         run: |
           az deployment sub create \
             --location eastus \
-            --template-file infra/main.bicep \
-            --parameters infra/workloads/authpilot/dev.bicepparam
+            --template-file infra/workloads/authpilot/main.bicep \
+            --parameters infra/workloads/authpilot/environments/dev.bicepparam
         continue-on-error: false
 
       - name: Upload deployment output

@@ -2,70 +2,93 @@
 
 ## Repository Overview
 
-**cerebricep** is an Infrastructure-as-Code (IaC) project for deploying AI workloads to Azure using **Bicep** templates and **GitHub Actions** for CI/CD automation. The project implements a modular, environment-aware infrastructure that supports dev, UAT, and production deployments with security best practices including OIDC authentication and managed identities.
+**cerebricep** is an Infrastructure-as-Code (IaC) project for deploying workloads to Azure using **Bicep** templates and **GitHub Actions** for CI/CD automation. The project implements a **workload-centric architecture** where each workload is completely self-contained with its own main template, parameters, and deployment pipeline.
 
 ### Key Facts
 - **Language**: Bicep (Azure ARM template DSL)
 - **Tools**: Azure CLI, GitHub Actions
-- **Target**: Azure subscription-level deployments
-- **Environments**: dev, uat, prod (cost-optimized for each tier)
+- **Target**: Azure subscription-level deployments (each workload creates its own resource group)
+- **Architecture**: Workload-centric (independent deployments, zero cross-workload dependencies)
 
 ## Project Architecture
 
-### Major Components
-- **infra/main.bicep** - Main orchestration template (subscription scope, ~200 lines)
-- **infra/modules/** - Modular Bicep templates organized by domain:
-  - `ai/` - Document Intelligence
-  - `compute/` - Function App + App Service Plan
-  - `config/` - Key Vault, App Configuration
-  - `data/` - Cosmos DB, Storage Account
-  - `identity/` - User-Assigned Managed Identity
-  - `monitoring/` - Log Analytics, Application Insights
-- **infra/environments/** - Parameter files for dev/uat/prod:
-  - `dev.bicepparam` - Cost-optimized (Consumption Y1, F0 SKUs, 400 RU/s)
-  - `uat.bicepparam` - Balanced (Premium EP1, S0 SKUs, 1000 RU/s, private endpoints enabled)
-  - `prod.bicepparam` - High-availability (Premium EP2, S0 SKUs, 4000 RU/s, zone redundancy enabled)
-- **bicepconfig.json** - Bicep linting rules (strict security/naming conventions)
+### Workload-Centric Structure
+```
+infra/
+├── modules/              # Shared reusable building blocks
+│   ├── ai/
+│   ├── compute/
+│   ├── config/
+│   ├── data/
+│   ├── identity/
+│   └── monitoring/
+└── workloads/
+    └── authpilot/        # Self-contained workload
+        ├── main.bicep    # Subscription-scope orchestration
+        └── environments/
+            ├── dev.bicepparam
+            ├── uat.bicepparam
+            └── prod.bicepparam
+```
 
-### Deployment Flow
-All resources use **User-Assigned Managed Identity** for authentication (no stored secrets). Deployment order is enforced:
-1. Resource Group
-2. Monitoring (Log Analytics + App Insights) - other resources depend on this
-3. Identity (Managed Identity)
-4. Key Vault (RBAC with managed identity principal)
-5. Storage, Cosmos DB, App Configuration (with managed identity RBAC)
-6. Document Intelligence
-7. Function App (wired to all above services)
+### Core Principles
+1. **Each workload is independent** - Has its own `main.bicep` and parameter files
+2. **No shared main template** - Workloads compose modules they need
+3. **Single source of truth** - Workload's `main.bicep` + `environments/*.bicepparam` contain everything
+4. **Zero cross-workload impact** - Changes to one workload don't affect others
+5. **No scripts** - Everything defined in Bicep templates (repeatable, version-controlled)
+
+### Shared Modules (infra/modules/)
+Reusable building blocks organized by domain:
+- `ai/` - Document Intelligence
+- `compute/` - Function App + App Service Plan  
+- `config/` - Key Vault, App Configuration
+- `data/` - Cosmos DB, DocumentDB (MongoDB), Storage Account
+- `identity/` - User-Assigned Managed Identity
+- `monitoring/` - Log Analytics, Application Insights
+
+**Module characteristics:**
+- Resource Group scope (not subscription scope)
+- Standalone (no external dependencies)
+- Accept: `location`, `tags`, resource-specific parameters
+- Output: resource IDs, endpoints, principal IDs (for RBAC chains)
+
+### Current Workloads
+
+#### AuthPilot
+- **Location**: `infra/workloads/authpilot/`
+- **Purpose**: Fax processing with DocumentDB (MongoDB)
+- **Deployed Resources**: Resource Group + DocumentDB
+- **Modules Used**: `modules/data/documentdb.bicep`
+- **Workflow**: `.github/workflows/deploy-authpilot.yml`
 
 ## Build & Validation Commands
 
 ### Prerequisites
 - **Azure CLI** (v2.60+) with Bicep support installed: `az bicep upgrade`
 - **az login** credentials configured
-- **GitHub environment variables** set in Actions: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_REGION`
+- **GitHub environment variables** set in Actions: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
 
-### Bicep Validation (Always Run Before Committing)
+### Validating a Workload (Always Run Before Committing)
 ```bash
-# Lint and validate syntax for main template
-az bicep build --file infra/main.bicep --stdout > /dev/null
+# Validate authpilot workload
+az bicep build --file infra/workloads/authpilot/main.bicep --stdout > /dev/null
+az bicep build-params --file infra/workloads/authpilot/environments/dev.bicepparam --outfile /dev/null
 
-# Validate all modules (check each module builds without external dependencies)
-az bicep build --file infra/modules/compute/function-app.bicep --stdout > /dev/null
-az bicep build --file infra/modules/config/key-vault.bicep --stdout > /dev/null
-az bicep build --file infra/modules/data/cosmos-db.bicep --stdout > /dev/null
-az bicep build --file infra/modules/data/storage-account.bicep --stdout > /dev/null
-az bicep build --file infra/modules/config/app-configuration.bicep --stdout > /dev/null
-az bicep build --file infra/modules/ai/document-intelligence.bicep --stdout > /dev/null
-az bicep build --file infra/modules/identity/user-assigned-identity.bicep --stdout > /dev/null
-az bicep build --file infra/modules/monitoring/log-analytics.bicep --stdout > /dev/null
+# Validate individual shared modules (optional)
+az bicep build --file infra/modules/data/documentdb.bicep --stdout > /dev/null
 ```
+
+### Deploying a Workload
+```bash
+# Deploy authpilot to dev environment
+az deployment sub create \
+  --location eastus \
+  --template-file infra/workloads/authpilot/main.bicep \
+  --parameters infra/workloads/authpilot/environments/dev.bicepparam
+```
+
 **Success Indicator**: Outputs valid ARM template JSON with no warnings/errors (warnings about Bicep versions can be ignored).
-
-### Parameter File Validation
-```bash
-# Each bicepparam file is validated when referenced by GitHub Actions, but you can test locally
-az bicep build-params --file infra/environments/dev.bicepparam --outfile dev.parameters.json
-```
 
 ## Key Project Rules & Patterns
 
@@ -89,9 +112,9 @@ az bicep build-params --file infra/environments/dev.bicepparam --outfile dev.par
 - `scripts/**` (unless the script intentionally outputs secrets to terminal, not files)
 
 ### Naming Conventions (Bicep)
-- All resource names follow a strict pattern in `main.bicep`: `{resourceType}-{workloadName}-{environment}`
+- All resource names follow pattern: `{resourceType}-{workloadName}-{environment}`
 - Storage account names: `st{workloadNameNoHyphens}{environment}` (no hyphens, max 24 chars)
-- Example: `func-cerebricep-dev`, `kv-cerebricep-prod`, `cosmos-cerebricep-uat`
+- Example: `func-authpilot-dev`, `mongodb-authpilot-prod`, `kv-authpilot-uat`
 
 ### Module Structure
 Every module:
@@ -101,10 +124,10 @@ Every module:
 - **Depends on**: Nothing external (standalone, composable)
 
 ### Parameter Flow
-- **main.bicep** defines top-level parameters and enforcement logic (allowed values, constraints)
-- **environment/*.bicepparam** files provide environment-specific values
+- **Workload main.bicep** defines parameters and enforcement logic (allowed values, constraints)
+- **environments/*.bicepparam** files provide environment-specific values
 - **No hardcoded values** in module files - everything parameterized
-- **Tags** are merged at main template level: `union(tags, {environment, workload, managedBy})`
+- **Tags** are merged at workload template level: `union(tags, {environment, workload, managedBy})`
 
 ### RBAC & Security
 - All services authenticated via **User-Assigned Managed Identity**
@@ -124,19 +147,27 @@ Every module:
    - Comments with `// ==== ... ====` section dividers
    - `@description()` decorator on every parameter
    - Output block with all relevant resource IDs/endpoints
-3. Add module deployment to `infra/main.bicep` with unique `name: 'modulename-${uniqueString(deployment().name)}'` (replace "modulename" with the actual module's function, e.g., "monitoring", "identity")
-4. Add outputs to `main.bicep` outputs block
-5. Run `az bicep build --file infra/main.bicep --stdout > /dev/null` to validate
-6. Update all three `*.bicepparam` files with new parameters
+3. Add module deployment to workload's `main.bicep` with unique `name: 'modulename-${uniqueString(deployment().name)}'`
+4. Add outputs to workload's `main.bicep` outputs block
+5. Run `az bicep build --file infra/workloads/{workload}/main.bicep --stdout > /dev/null` to validate
+6. Update workload's `environments/*.bicepparam` files with new parameters
+
+### Adding a New Workload
+1. Create directory: `infra/workloads/{workload-name}/`
+2. Create `main.bicep` (subscription scope, creates resource group, composes needed modules)
+3. Create `environments/dev.bicepparam` (and uat/prod as needed)
+4. Reference modules using relative path: `../../modules/{category}/{module}.bicep`
+5. Create GitHub workflow: `.github/workflows/deploy-{workload-name}.yml`
+6. Validate: `az bicep build --file infra/workloads/{workload-name}/main.bicep`
 
 ### Updating Parameters
-- **Never modify `main.bicep` parameter defaults** - change them in `infra/environments/{env}.bicepparam` instead
-- Test with: `az bicep build-params --file infra/environments/dev.bicepparam --outfile dev.parameters.json`
+- **Never modify workload `main.bicep` parameter defaults** - change them in `environments/{env}.bicepparam` instead
+- Test with: `az bicep build-params --file infra/workloads/{workload}/environments/dev.bicepparam --outfile /dev/null`
 - Ensure parameter names match exactly between `main.bicep` and `*.bicepparam`
 
 ### Debugging Deployments
 When a GitHub Actions deployment fails:
-1. Check the "Validate" step output for Bicep errors (run `az bicep build --file infra/main.bicep` locally to reproduce)
+1. Check the "Validate" step output for Bicep errors (run `az bicep build --file infra/workloads/{workload}/main.bicep` locally to reproduce)
 2. Look for RBAC issues (managed identity may not have permission to access Key Vault) - add `principalId` grant in Key Vault module
 3. Verify all module outputs referenced in dependent modules exist
 4. Check environment variables in GitHub environment settings match parameter file expectations
