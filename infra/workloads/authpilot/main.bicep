@@ -1,6 +1,6 @@
 // ============================================================================
-// Main Orchestration Template
-// Deploys Azure DocumentDB for MongoDB only
+// AuthPilot Workload - Main Orchestration Template
+// Deploys Azure DocumentDB for MongoDB
 // ============================================================================
 
 targetScope = 'subscription'
@@ -15,11 +15,6 @@ param environment string
 
 @description('Azure region for all resources')
 param location string
-
-@description('Workload name used for resource naming')
-@minLength(3)
-@maxLength(20)
-param workloadName string
 
 @description('Tags to apply to all resources')
 param tags object = {}
@@ -44,6 +39,7 @@ param documentDbEnableHighAvailability bool = false
 // Variables
 // ============================================================================
 
+var workloadName = 'authpilot'
 var resourceGroupName = 'rg-${workloadName}-${environment}'
 var commonTags = union(tags, {
   environment: environment
@@ -70,7 +66,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 // ============================================================================
 
 // DocumentDB (MongoDB)
-module documentDb './modules/data/documentdb.bicep' = {
+module documentDb '../../modules/data/documentdb.bicep' = {
   scope: rg
   name: 'documentdb-${uniqueString(deployment().name)}'
   params: {
