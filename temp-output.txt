@@ -1,0 +1,1 @@
+ERROR: D:\source\cerebricep\infra\workloads\authpilot\environments\dev.bicepparam(1,7) : Error BCP091: An error occurred reading file. Could not find a part of the path 'D:\source\cerebricep\infra\workloads\workloads\authpilot\main.bicep'. [https://aka.ms/bicep/core-diagnostics#BCP091]

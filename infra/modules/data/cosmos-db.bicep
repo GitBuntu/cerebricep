@@ -26,8 +26,43 @@ param enableZoneRedundancy bool = false
 param databaseName string = 'app-data'
 
 @description('MongoDB server version')
-@allowed(['3.6', '4.0', '4.2', '5.0'])
+@allowed(['3.6', '4.0', '4.2', '5.0', '6.0', '7.0'])
 param mongoServerVersion string = '4.2'
+
+@description('Enable free tier (cannot be combined with provisioned throughput)')
+param enableFreeTier bool = false
+
+@description('Enable automatic failover')
+param enableAutomaticFailover bool = false
+
+@description('Enable multiple write locations')
+param enableMultipleWriteLocations bool = false
+
+@description('Enable analytical storage')
+param enableAnalyticalStorage bool = false
+
+@description('Backup policy type')
+@allowed(['Continuous', 'Periodic'])
+param backupPolicyType string = 'Continuous'
+
+@description('Backup interval in minutes (Periodic only)')
+@minValue(60)
+@maxValue(1440)
+param backupIntervalInMinutes int = 240
+
+@description('Backup retention in hours (Periodic only)')
+@minValue(8)
+@maxValue(720)
+param backupRetentionInHours int = 8
+
+@description('IP rules for firewall (array of IP addresses or CIDR ranges)')
+param ipRules array = []
+
+@description('Virtual network rules (array of subnet resource IDs)')
+param virtualNetworkRules array = []
+
+@description('Allowed origins for CORS')
+param corsAllowedOrigins array = []
 
 // Determine if serverless
 var isServerless = throughput == 0
@@ -43,6 +78,7 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   kind: 'MongoDB'
   properties: {
     databaseAccountOfferType: 'Standard'
+    enableFreeTier: enableFreeTier
     locations: [
       {
         locationName: location
@@ -58,10 +94,34 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
       serverVersion: mongoServerVersion
     }
     disableLocalAuth: true
-    enableAutomaticFailover: false
-    enableMultipleWriteLocations: false
+    enableAutomaticFailover: enableAutomaticFailover
+    enableMultipleWriteLocations: enableMultipleWriteLocations
+    enableAnalyticalStorage: enableAnalyticalStorage
     publicNetworkAccess: 'Enabled'
     networkAclBypass: 'AzureServices'
+    ipRules: [for rule in ipRules: {
+      ipAddressOrRange: rule
+    }]
+    virtualNetworkRules: [for rule in virtualNetworkRules: {
+      id: rule
+    }]
+    cors: empty(corsAllowedOrigins) ? [] : [
+      {
+        allowedOrigins: join(corsAllowedOrigins, ',')
+      }
+    ]
+    backupPolicy: backupPolicyType == 'Continuous' ? {
+      type: 'Continuous'
+      continuousModeProperties: {
+        tier: 'Continuous30Days'
+      }
+    } : {
+      type: 'Periodic'
+      periodicModeProperties: {
+        backupIntervalInMinutes: backupIntervalInMinutes
+        backupRetentionIntervalInHours: backupRetentionInHours
+      }
+    }
   }
 }
 
@@ -97,3 +157,4 @@ output name string = cosmosAccount.name
 output endpoint string = cosmosAccount.properties.documentEndpoint
 output databaseName string = mongoDatabase.name
 output mongoServerVersion string = mongoServerVersion
+output connectionString string = 'mongodb://${cosmosAccount.name}:${listKeys(cosmosAccount.id, cosmosAccount.apiVersion).primaryMasterKey}@${cosmosAccount.name}.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000'

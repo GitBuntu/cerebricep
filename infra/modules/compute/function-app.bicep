@@ -5,8 +5,8 @@
 @description('Name of the Function App')
 param functionAppName string
 
-@description('Name of the App Service Plan')
-param appServicePlanName string
+@description('Resource ID of the App Service Plan')
+param appServicePlanId string
 
 @description('Location for resources')
 param location string = resourceGroup().location
@@ -14,8 +14,8 @@ param location string = resourceGroup().location
 @description('Tags to apply to resources')
 param tags object = {}
 
-@description('SKU for the App Service Plan')
-@allowed(['Y1', 'EP1', 'EP2', 'EP3', 'Flex'])
+@description('SKU of the App Service Plan (for conditional logic)')
+@allowed(['Y1', 'EP1', 'EP2', 'EP3', 'Flex', 'P1V2', 'P2V2', 'P3V2'])
 param sku string = 'Y1'
 
 @description('User-assigned managed identity resource ID')
@@ -46,31 +46,27 @@ param runtime string = 'dotnet-isolated'
 @description('Runtime version')
 param runtimeVersion string = '9.0'
 
+@description('Enable deployment slots')
+param enableDeploymentSlots bool = false
+
+@description('Enable private endpoint')
+param enablePrivateEndpoint bool = false
+
+@description('Subnet ID for private endpoint (required if enablePrivateEndpoint is true)')
+param privateEndpointSubnetId string = ''
+
+@description('Custom domain name (optional)')
+param customDomainName string = ''
+
+@description('Environment-specific app settings (additional to defaults)')
+param additionalAppSettings array = []
+
 // Determine plan kind and tier based on SKU
 var isConsumption = sku == 'Y1'
 var isFlex = sku == 'Flex'
-var planKind = isConsumption ? 'functionapp' : 'elastic'
-var skuTier = isConsumption ? 'Dynamic' : (isFlex ? 'FlexConsumption' : 'ElasticPremium')
-var skuName = isFlex ? 'FC1' : sku
-
-// App Service Plan
-resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
-  name: appServicePlanName
-  location: location
-  tags: tags
-  kind: planKind
-  sku: {
-    name: skuName
-    tier: skuTier
-  }
-  properties: {
-    reserved: true // Linux
-    maximumElasticWorkerCount: isConsumption ? null : 20
-  }
-}
 
 // Common app settings (excluding runtime-specific ones that vary by plan)
-var baseAppSettings = [
+var baseAppSettings = concat([
   {
     name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
     value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2022-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
@@ -99,7 +95,7 @@ var baseAppSettings = [
     name: 'AZURE_CLIENT_ID'
     value: managedIdentityClientId
   }
-]
+], additionalAppSettings)
 
 // For standard plans, add FUNCTIONS_WORKER_RUNTIME
 var appSettingsStandard = concat(baseAppSettings, [
@@ -143,9 +139,9 @@ var siteConfig = isFlex ? siteConfigFlex : siteConfigStandard
 
 // Base properties for Function App
 var functionAppBaseProperties = {
-  serverFarmId: appServicePlan.id
+  serverFarmId: appServicePlanId
   httpsOnly: true
-  publicNetworkAccess: 'Enabled'
+  publicNetworkAccess: enablePrivateEndpoint ? 'Disabled' : 'Enabled'
   clientAffinityEnabled: false
   siteConfig: siteConfig
 }
@@ -210,7 +206,47 @@ resource basicPublishingCredentialsPolicyFTP 'Microsoft.Web/sites/basicPublishin
   }
 }
 
+// Deployment slot (staging) - conditionally deployed
+resource stagingSlot 'Microsoft.Web/sites/slots@2024-11-01' = if (enableDeploymentSlots) {
+  parent: functionApp
+  name: 'staging'
+  location: location
+  tags: tags
+  kind: 'functionapp,linux'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentityId}': {}
+    }
+  }
+  properties: functionAppProperties
+}
+
+// Private endpoint - conditionally deployed
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = if (enablePrivateEndpoint) {
+  name: '${functionAppName}-pe'
+  location: location
+  tags: tags
+  properties: {
+    subnet: {
+      id: privateEndpointSubnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: '${functionAppName}-plsc'
+        properties: {
+          privateLinkServiceId: functionApp.id
+          groupIds: ['sites']
+        }
+      }
+    ]
+  }
+}
+
 // Outputs
 output id string = functionApp.id
 output name string = functionApp.name
 output hostname string = functionApp.properties.defaultHostName
+output principalId string = functionApp.identity.principalId
+output stagingSlotName string = enableDeploymentSlots ? stagingSlot.name : ''
+output privateEndpointId string = enablePrivateEndpoint ? privateEndpoint.id : ''

@@ -56,7 +56,37 @@ param computeTier string = 'M10'
 @description('Enable high availability')
 param enableHighAvailability bool = false
 
-resource mongoCluster 'Microsoft.DocumentDB/mongoClusters@2025-09-01' = {
+@description('Storage type for the cluster')
+@allowed([
+  'PremiumSSD'
+  'SSD'
+])
+param storageType string = 'PremiumSSD'
+
+@description('Enable public network access')
+param publicNetworkAccess bool = true
+
+@description('Array of firewall rules for client IP addresses: [{name: string, startIp: string, endIp: string}]')
+param firewallRules array = []
+
+@description('Enable Data API access')
+param enableDataApi bool = false
+
+@description('Allowed authentication modes')
+@allowed([
+  'NativeAuth'
+  'Passwordless'
+])
+param authMode string = 'NativeAuth'
+
+@description('Backup retention mode (Continuous or Periodic)')
+@allowed([
+  'Continuous'
+  'Periodic'
+])
+param backupRetention string = 'Continuous'
+
+resource mongoCluster 'Microsoft.DocumentDB/mongoClusters@2025-04-01-preview' = {
   name: name
   location: location
   tags: tags
@@ -66,23 +96,35 @@ resource mongoCluster 'Microsoft.DocumentDB/mongoClusters@2025-09-01' = {
       password: adminPassword
     }
     serverVersion: serverVersion
-    sharding: {
-      shardCount: shardCount
+    compute: {
+      tier: computeTier
     }
     storage: {
       sizeGb: storageSizeGb
+      type: storageType
+    }
+    sharding: {
+      shardCount: shardCount
     }
     highAvailability: {
       targetMode: enableHighAvailability ? 'ZoneRedundantPreferred' : 'Disabled'
     }
-    compute: {
-      tier: computeTier
+    backup: {}
+    publicNetworkAccess: publicNetworkAccess ? 'Enabled' : 'Disabled'
+    dataApi: {
+      mode: enableDataApi ? 'Enabled' : 'Disabled'
     }
+    authConfig: {
+      allowedModes: [
+        authMode
+      ]
+    }
+    createMode: 'Default'
   }
 }
 
 // Firewall rule to allow Azure services
-resource firewallRuleAzureServices 'Microsoft.DocumentDB/mongoClusters/firewallRules@2025-09-01' = {
+resource firewallRuleAzureServices 'Microsoft.DocumentDB/mongoClusters/firewallRules@2025-04-01-preview' = {
   parent: mongoCluster
   name: 'AllowAllAzureServices'
   properties: {
@@ -91,8 +133,28 @@ resource firewallRuleAzureServices 'Microsoft.DocumentDB/mongoClusters/firewallR
   }
 }
 
+// Firewall rules for client IP addresses
+resource firewallRulesCustom 'Microsoft.DocumentDB/mongoClusters/firewallRules@2025-04-01-preview' = [
+  for (rule, index) in firewallRules: {
+    parent: mongoCluster
+    name: rule.name
+    properties: {
+      startIpAddress: rule.startIp
+      endIpAddress: rule.endIp
+    }
+  }
+]
+
+// Database admin user
+resource dbAdminUser 'Microsoft.DocumentDB/mongoClusters/users@2025-04-01-preview' = {
+  parent: mongoCluster
+  name: adminUsername
+  properties: {}
+}
+
 // Outputs
 output id string = mongoCluster.id
 output name string = mongoCluster.name
-output endpoint string = mongoCluster.properties.connectionString
+output connectionString string = mongoCluster.properties.connectionString
 output serverVersion string = mongoCluster.properties.serverVersion
+output adminUsername string = adminUsername

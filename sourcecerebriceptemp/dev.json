@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "tags": {
+      "value": {
+        "project": "authpilot",
+        "costCenter": "engineering"
+      }
+    },
+    "documentDbAdminUsername": {
+      "value": "dbadmin"
+    },
+    "documentDbAdminPassword": {
+      "value": "P@ssw0rd123!"
+    },
+    "documentDbServerVersion": {
+      "value": "8.0"
+    },
+    "documentDbComputeTier": {
+      "value": "M10"
+    },
+    "documentDbStorageSizeGb": {
+      "value": 32
+    },
+    "documentDbShardCount": {
+      "value": 1
+    },
+    "documentDbEnableHighAvailability": {
+      "value": false
+    },
+    "documentDbPublicNetworkAccess": {
+      "value": true
+    },
+    "documentDbFirewallRules": {
+      "value": []
+    },
+    "appServicePlanSku": {
+      "value": "Y1"
+    },
+    "functionAppRuntime": {
+      "value": "dotnet-isolated"
+    },
+    "functionAppRuntimeVersion": {
+      "value": "9.0"
+    },
+    "enableDeploymentSlots": {
+      "value": false
+    },
+    "enablePrivateEndpoints": {
+      "value": false
+    },
+    "logAnalyticsRetentionInDays": {
+      "value": 30
+    },
+    "appInsightsRetentionInDays": {
+      "value": 90
+    },
+    "enableSmartDetection": {
+      "value": true
+    },
+    "storageAccountSku": {
+      "value": "Standard_LRS"
+    }
+  }
+}
