@@ -27,8 +27,14 @@ All shared functionality MUST be implemented as reusable modules in `infra/modul
 ### III. Infrastructure-as-Code Rigor (NON-NEGOTIABLE)
 ALL infrastructure MUST be defined in Bicep templates—NO imperative scripts. Every resource creation, permission assignment, and configuration MUST be version-controlled, repeatable, and traceable. Bicep templates MUST pass linting (bicepconfig.json errors MUST be fixed; warnings SHOULD be addressed). Pre-deployment validation with `az bicep build` and `az bicep build-params` is MANDATORY before commits.
 
-### IV. Security: No Credentials in Version Control
-NEVER commit actual or example credentials, secrets, API keys, subscription IDs, or any reference values that resemble real credentials to any tracked file. Use generic placeholders (`{YOUR_SUBSCRIPTION_ID}`, `your-app-id`). All sensitive values MUST be injected at deployment time via GitHub Actions secrets or Key Vault. Managed identities MUST be used for all service-to-service authentication (no stored keys/passwords).
+### IV. Security: No Credentials in Version Control (CRITICAL)
+NEVER commit to ANY tracked file:
+- Actual or example credentials, secrets, API keys
+- Subscription IDs, tenant IDs, object IDs, principal IDs (even as examples)
+- Real phone numbers, email addresses, or resource identifiers (e.g., `+1-866-687-4795`, `user@company.com`)
+- Connection strings, database names, or any reference values resembling real infrastructure
+
+Instead: Use generic placeholders (`{YOUR_SUBSCRIPTION_ID}`, `your-phone-number`, `{RESOURCE_NAME}`, `user@example.com`). All sensitive values MUST be injected at deployment time via GitHub Actions secrets or Key Vault. Managed identities MUST be used for all service-to-service authentication (no stored keys/passwords). Documentation MUST direct users to retrieve actual values from Azure CLI output, deployment logs, or deployment-time configuration—NEVER embed them in code or docs.
 
 ### V. Consistent Naming & Parameterization
 All resource names MUST follow the pattern `{resourceType}-{workloadName}-{environment}`. Storage account names MUST omit hyphens: `st{workloadName}{environment}` (24-character limit). Environment-specific values MUST be in `*.bicepparam` files; workload `main.bicep` defines parameters and validation logic (allowed values, constraints). Tags MUST be merged at the workload level: `union(tags, {environment, workload, managedBy})`.
