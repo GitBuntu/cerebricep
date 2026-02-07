@@ -105,7 +105,7 @@ Product leadership needs confidence that the selected resources (Functions, SQL,
 
 1. **Given** the MVP targets 100 calls/day (~1.4 concurrent calls average, ~5 concurrent peak), **When** resource capacity is calculated, **Then** all selected resources have sufficient capacity headroom ≥ 3x peak load (i.e., handle 15 concurrent calls maximum during MVP phase; headroom for 5x growth before tier upgrade needed)
 
-2. **Given** security requirements for MVP, **When** security checklist is reviewed, **Then** critical items (SQL firewall, HTTPS enforcement) are implemented and non-critical items (Key Vault, VNet) are documented for Phase 2 with compliance requirements (Key Vault must use Azure RBAC with the latest stable Key Vault ARM API version supported at deployment time, in alignment with the official Azure Key Vault retirement announcements (see [official Azure Key Vault retirement guidance]({LINK_TO_OFFICIAL_AZURE_KEY_VAULT_RETIREMENT_NOTICE})))
+2. **Given** security requirements for MVP, **When** security checklist is reviewed, **Then** critical items (SQL firewall, HTTPS enforcement) are implemented and non-critical items (Key Vault, VNet) are documented for Phase 2 with compliance requirements (Key Vault must use Azure RBAC with the latest stable Key Vault ARM API version supported at deployment time, in alignment with the official Azure Key Vault retirement announcements (see [official Azure Key Vault retirement guidance](https://azure.microsoft.com/updates/?product=key-vault&update-type=retirements)))
 
 3. **Given** cost constraints, **When** the cost breakdown is reviewed, **Then** the new infrastructure costs < $10/month and existing shared resources are leveraged to minimize total spend
 
