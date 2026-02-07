@@ -56,7 +56,9 @@ infra/
 │   │   └── key-vault.bicep          # (Phase 2: RBAC implementation)
 │   ├── data/
 │   │   ├── storage-account.bicep    # ✅ USED: Storage Account for Functions runtime
-│   │   └── sql-database.bicep       # ✅ USED: SQL Database provisioning
+│   │   ├── cosmos-db.bicep          # (exists - not used in this feature)
+│   │   ├── documentdb.bicep         # (exists - not used in this feature)
+│   │   └── sql-database.bicep       # 🆕 NEW: SQL Database provisioning (to be created)
 │   ├── identity/
 │   │   └── user-assigned-identity.bicep  # (Phase 2: Managed Identity setup)
 │   └── monitoring/
@@ -92,12 +94,13 @@ specs/001-call-agent-deploy/
 ```
 
 **New Artifacts to Create**:
-1. `infra/workloads/healthcare-call-agent/main.bicep` - Workload orchestration template (subscription scope)
-2. `infra/workloads/healthcare-call-agent/environments/dev.bicepparam` - Dev parameters
-3. `infra/workloads/healthcare-call-agent/environments/prod.bicepparam` - Prod parameters
-4. `specs/001-call-agent-deploy/research.md` - Cross-RG referencing patterns and validation
-5. `specs/001-call-agent-deploy/quickstart.md` - Step-by-step deployment guide
-6. `.github/workflows/deploy-healthcare-call-agent.yml` - GitHub Actions CI/CD pipeline
+1. `infra/modules/data/sql-database.bicep` - SQL Server and Database module (reusable, RG-scoped)
+2. `infra/workloads/healthcare-call-agent/main.bicep` - Workload orchestration template (subscription scope)
+3. `infra/workloads/healthcare-call-agent/environments/dev.bicepparam` - Dev parameters
+4. `infra/workloads/healthcare-call-agent/environments/prod.bicepparam` - Prod parameters
+5. `specs/001-call-agent-deploy/research.md` - Cross-RG referencing patterns and validation
+6. `specs/001-call-agent-deploy/quickstart.md` - Step-by-step deployment guide
+7. `.github/workflows/deploy-healthcare-call-agent.yml` - GitHub Actions CI/CD pipeline
 
 ## Complexity Tracking
 
