@@ -105,7 +105,7 @@ Product leadership needs confidence that the selected resources (Functions, SQL,
 
 1. **Given** the MVP targets 100 calls/day (~1.4 concurrent calls average, ~5 concurrent peak), **When** resource capacity is calculated, **Then** all selected resources have sufficient capacity headroom ≥ 3x peak load (i.e., handle 15 concurrent calls maximum during MVP phase; headroom for 5x growth before tier upgrade needed)
 
-2. **Given** security requirements for MVP, **When** security checklist is reviewed, **Then** critical items (SQL firewall, HTTPS enforcement) are implemented and non-critical items (Key Vault, VNet) are documented for Phase 2
+2. **Given** security requirements for MVP, **When** security checklist is reviewed, **Then** critical items (SQL firewall, HTTPS enforcement) are implemented and non-critical items (Key Vault, VNet) are documented for Phase 2 with compliance requirements (Key Vault must use Azure RBAC with the latest stable Key Vault ARM API version supported at deployment time, in alignment with the official Azure Key Vault retirement announcements (see [official Azure Key Vault retirement guidance](https://azure.microsoft.com/updates/?product=key-vault&update-type=retirements)))
 
 3. **Given** cost constraints, **When** the cost breakdown is reviewed, **Then** the new infrastructure costs < $10/month and existing shared resources are leveraged to minimize total spend
 
@@ -360,7 +360,7 @@ FunctionsAppConfiguration
 │       └── Scope: Used for Entity Framework Core connection
 │
 └── Storage: Azure Functions Application Settings (temporary for MVP)
-    └── Future Upgrade (Phase 2): Azure Key Vault with Managed Identity access
+    └── Future Upgrade (Phase 2): Azure Key Vault with Azure RBAC (using the latest supported/stable Key Vault ARM API version at deployment time; see Azure Key Vault change log: https://learn.microsoft.com/azure/key-vault/general/change-log) and Managed Identity access
 ```
 
 ---
@@ -402,7 +402,11 @@ FunctionsAppConfiguration
 ## Out of Scope (Deferred to Future Phases)
 
 ### Phase 2 - Security Hardening
-- [ ] Azure Key Vault implementation (currently using Functions App settings)
+- [ ] Azure Key Vault implementation using Azure RBAC (using the latest stable/supported Key Vault ARM API version available at deployment time and aligned with Microsoft's published Key Vault API retirement guidance)
+  - [ ] Deploy Key Vault with `enableRbacAuthorization: true`
+  - [ ] Assign RBAC roles (Key Vault Secrets Officer, Key Vault Secrets User) to managed identities
+  - [ ] Migrate connection strings from Functions App settings to Key Vault
+  - [ ] Validate deployment uses a currently supported Key Vault API version and complies with the official Azure Key Vault API retirement timeline as documented on Microsoft Learn
 - [ ] Virtual Network (VNet) with private subnets
 - [ ] Network Security Groups (NSGs) for access control
 - [ ] Private Endpoints for SQL Database and Key Vault
@@ -505,6 +509,24 @@ FunctionsAppConfiguration
 - [GitHub Actions Azure Login](https://github.com/Azure/login)
 - [Entity Framework Core Migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/)
 - [Cross-Resource Group Deployments Pattern](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/common-deployment-errors)
+
+---
+
+## Compliance Notes
+
+### Azure Key Vault RBAC Compliance (Phase 2)
+When Key Vault is implemented in Phase 2, it **MUST** comply with the following requirements:
+
+- **API Version Guidance**: Use a **currently supported/stable Azure Key Vault resource API version** in the Key Vault Bicep module (avoid deprecated or retired API versions, and periodically bump the module’s API version as Azure retires older versions)
+- **Access Control Model**: Use Azure RBAC (`enableRbacAuthorization: true`) instead of legacy access policies
+- **Retirement Monitoring**: Review official Azure updates for Key Vault API version and feature retirement notices and ensure that all new Key Vault instances use only supported API versions and RBAC-based access control
+- **RBAC Roles**: Assign built-in Azure roles (Key Vault Secrets Officer, Key Vault Secrets User) to managed identities using principle of least privilege
+- **No Legacy Access Policies**: Phase 2 deployment must not create any legacy access policy entries
+- **Bicep Template**: Key Vault module must be updated to enforce RBAC as the default access control model
+
+Referencing:
+- Azure Key Vault RBAC guidance: https://learn.microsoft.com/azure/key-vault/general/rbac-guide
+- Azure Updates for Key Vault announcements: https://azure.microsoft.com/updates/?category=security&query=Key%20Vault
 
 ---
 
