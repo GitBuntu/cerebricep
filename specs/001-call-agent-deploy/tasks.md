@@ -32,19 +32,19 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create workload directory structure `infra/workloads/healthcare-call-agent/`
-- [ ] T002 Create workload main template `infra/workloads/healthcare-call-agent/main.bicep` (skeleton)
-- [ ] T003 Create environment parameter files: `dev.bicepparam`, `uat.bicepparam`, `prod.bicepparam`
-- [ ] T004 Create workload documentation file `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md` (skeleton)
+- [X] T001 Create workload directory structure `infra/workloads/healthcare-call-agent/`
+- [X] T002 Create workload main template `infra/workloads/healthcare-call-agent/main.bicep` (skeleton)
+- [X] T003 Create environment parameter files: `dev.bicepparam`, `uat.bicepparam`, `prod.bicepparam`
+- [X] T004 Create workload documentation file `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md` (skeleton)
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T005 [P] Verify Azure SQL Database module exists or design new `infra/modules/data/sql-database.bicep`
-- [ ] T006 [P] Document cross-RG referencing pattern in `infra/workloads/healthcare-call-agent/CROSS-RG-PATTERN.md` with working Bicep examples (Bicep `resourceId()` + `listConnectionStrings()`/`listKeys()` functions); include in code review validation checklist
-- [ ] T007 [P] Update bicepconfig.json with any new linting rules for cross-RG patterns
-- [ ] T008 Create GitHub Actions workflow template `.github/workflows/deploy-healthcare-call-agent.yml` (skeleton)
+- [X] T005 [P] Verify Azure SQL Database module exists or design new `infra/modules/data/sql-database.bicep`
+- [X] T006 [P] Document cross-RG referencing pattern in `infra/workloads/healthcare-call-agent/CROSS-RG-PATTERN.md` with working Bicep examples (Bicep `resourceId()` + `listConnectionStrings()`/`listKeys()` functions); include in code review validation checklist
+- [X] T007 [P] Update bicepconfig.json with any new linting rules for cross-RG patterns
+- [X] T008 Create GitHub Actions workflow template `.github/workflows/deploy-healthcare-call-agent.yml` (skeleton)
 
 ---
 
@@ -60,16 +60,16 @@
 
 ### Implementation Tasks (US1)
 
-- [ ] T009 [US1] Implement resource group creation in `infra/workloads/healthcare-call-agent/main.bicep` (subscription scope)
-- [ ] T009.5 [P] [US1] Implement Bicep `listConnectionStrings()` and `listKeys()` functions to retrieve ACS connection string and AI Services endpoint from cross-RG resources; document error handling for missing resources
-- [ ] T010 [P] [US1] Implement storage account module call in main.bicep using `infra/modules/data/storage-account.bicep`
-- [ ] T011 [P] [US1] Implement SQL database module call in main.bicep using `infra/modules/data/sql-database.bicep`
-- [ ] T012 [P] [US1] Implement user-assigned identity module call in main.bicep using `infra/modules/identity/user-assigned-identity.bicep`
-- [ ] T013 [P] [US1] Implement function app module call in main.bicep using `infra/modules/compute/function-app.bicep`
-- [ ] T014 [US1] Add cross-RG query for ACS resource from `rg-vm-prod-canadacentral-001` in main.bicep
-- [ ] T015 [US1] Add cross-RG query for AI Services resource in main.bicep
-- [ ] T016 [US1] Add module outputs for all created resources in main.bicep (resource IDs, connection strings, endpoints)
-- [ ] T016.5 [US1] Implement error handling in Bicep for failed cross-RG resource queries; ensure clear error messages if ACS or AI Services resources not found in shared resource group (use `if()` condition + `error()` function)
+- [X] T009 [US1] Implement resource group creation in `infra/workloads/healthcare-call-agent/main.bicep` (subscription scope)
+- [X] T009.5 [P] [US1] Implement Bicep `listConnectionStrings()` and `listKeys()` functions to retrieve ACS connection string and AI Services endpoint from cross-RG resources; document error handling for missing resources
+- [X] T010 [P] [US1] Implement storage account module call in main.bicep using `infra/modules/data/storage-account.bicep`
+- [X] T011 [P] [US1] Implement SQL database module call in main.bicep using `infra/modules/data/sql-database.bicep`
+- [X] T012 [P] [US1] Implement user-assigned identity module call in main.bicep using `infra/modules/identity/user-assigned-identity.bicep`
+- [X] T013 [P] [US1] Implement function app module call in main.bicep using `infra/modules/compute/function-app.bicep`
+- [X] T014 [US1] Add cross-RG query for ACS resource from `rg-vm-prod-canadacentral-001` in main.bicep
+- [X] T015 [US1] Add cross-RG query for AI Services resource in main.bicep
+- [X] T016 [US1] Add module outputs for all created resources in main.bicep (resource IDs, connection strings, endpoints)
+- [X] T016.5 [US1] Implement error handling in Bicep for failed cross-RG resource queries; ensure clear error messages if ACS or AI Services resources not found in shared resource group (use `if()` condition + `error()` function)
 
 ---
 
@@ -85,12 +85,12 @@
 
 ### Implementation Tasks (US2)
 
-- [ ] T017 [P] [US2] Implement Bicep `resourceId()` function to reference ACS resource across RGs in main.bicep
-- [ ] T018 [P] [US2] Implement Bicep `listConnectionStrings()` or equivalent to retrieve ACS connection string in main.bicep
-- [ ] T019 [P] [US2] Implement Bicep `listKeys()` function to retrieve AI Services key in main.bicep
-- [ ] T020 [US2] Document RBAC role assignments in `.github/workflows/deploy-healthcare-call-agent.yml` comments
-- [ ] T021 [US2] Create RBAC validation checklist in `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md`
-- [ ] T022 [US2] Update agent context documentation with cross-RG pattern and security considerations
+- [X] T017 [P] [US2] Implement Bicep `resourceId()` function to reference ACS resource across RGs in main.bicep
+- [X] T018 [P] [US2] Implement Bicep `listConnectionStrings()` or equivalent to retrieve ACS connection string in main.bicep
+- [X] T019 [P] [US2] Implement Bicep `listKeys()` function to retrieve AI Services key in main.bicep
+- [X] T020 [US2] Document RBAC role assignments in `.github/workflows/deploy-healthcare-call-agent.yml` comments
+- [X] T021 [US2] Create RBAC validation checklist in `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md`
+- [X] T022 [US2] Update agent context documentation with cross-RG pattern and security considerations
 
 ---
 
@@ -106,11 +106,11 @@
 
 ### Implementation Tasks (US3)
 
-- [ ] T023 [P] [US3] Create cost analysis document in `specs/001-call-agent-deploy/cost-analysis.md` with resource breakdown
-- [ ] T024 [P] [US3] Create capacity planning document in `specs/001-call-agent-deploy/capacity-planning.md` with headroom calculations
-- [ ] T025 [US3] Document MVP security checklist in `specs/001-call-agent-deploy/security-checklist.md` (what IS protected)
-- [ ] T026 [US3] Document Phase 2 security roadmap in `specs/001-call-agent-deploy/security-roadmap-phase2.md` (what WILL BE protected)
-- [ ] T026.5 [US3] Create post-deployment monitoring task: measure actual monthly costs (first month) and resource capacity utilization; document variance vs. projections in `specs/001-call-agent-deploy/cost-analysis.md`
+- [X] T023 [P] [US3] Create cost analysis document in `specs/001-call-agent-deploy/cost-analysis.md` with resource breakdown
+- [X] T024 [P] [US3] Create capacity planning document in `specs/001-call-agent-deploy/capacity-planning.md` with headroom calculations
+- [X] T025 [US3] Document MVP security checklist in `specs/001-call-agent-deploy/security-checklist.md` (what IS protected)
+- [X] T026 [US3] Document Phase 2 security roadmap in `specs/001-call-agent-deploy/security-roadmap-phase2.md` (what WILL BE protected)
+- [X] T026.5 [US3] Create post-deployment monitoring task: measure actual monthly costs (first month) and resource capacity utilization; document variance vs. projections in `specs/001-call-agent-deploy/cost-analysis.md`
 
 ---
 
@@ -126,13 +126,13 @@
 
 ### Implementation Tasks (US4)
 
-- [ ] T027 [US4] Create step-by-step deployment guide in `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md`
-- [ ] T028 [US4] Implement post-deployment validation script in `infra/workloads/healthcare-call-agent/validate-deployment.ps1` (PowerShell)
-- [ ] T029 [P] [US4] Create troubleshooting guide in `specs/001-call-agent-deploy/troubleshooting.md`
-- [ ] T030 [P] [US4] Document rollback procedure in `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md`
-- [ ] T031 [US4] Create pre-deployment checklist in `specs/001-call-agent-deploy/pre-deployment-checklist.md`
-- [ ] T032 [US4] Update `.github/workflows/deploy-healthcare-call-agent.yml` with deployment success/failure notifications
-- [ ] T032.5 [US4] Implement Azure budget alert in GitHub Actions workflow to notify if monthly costs exceed $10/month threshold for new resources; document in DEPLOYMENT-NOTES.md
+- [X] T027 [US4] Create step-by-step deployment guide in `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md`
+- [X] T028 [US4] Implement post-deployment validation script in `infra/workloads/healthcare-call-agent/validate-deployment.ps1` (PowerShell)
+- [X] T029 [P] [US4] Create troubleshooting guide in `specs/001-call-agent-deploy/troubleshooting.md`
+- [X] T030 [P] [US4] Document rollback procedure in `infra/workloads/healthcare-call-agent/DEPLOYMENT-NOTES.md`
+- [X] T031 [US4] Create pre-deployment checklist in `specs/001-call-agent-deploy/pre-deployment-checklist.md`
+- [X] T032 [US4] Update `.github/workflows/deploy-healthcare-call-agent.yml` with deployment success/failure notifications
+- [X] T032.5 [US4] Implement Azure budget alert in GitHub Actions workflow to notify if monthly costs exceed $10/month threshold for new resources; document in DEPLOYMENT-NOTES.md
 
 ---
 

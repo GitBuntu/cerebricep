@@ -20,10 +20,6 @@ param managedIdentityPrincipalId string
 @allowed(['Standard_LRS', 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'])
 param sku string = 'Standard_LRS'
 
-@description('Storage account tier')
-@allowed(['Standard', 'Premium'])
-param tier string = 'Standard'
-
 @description('Storage access tier')
 @allowed(['Hot', 'Cool', 'Cold'])
 param accessTier string = 'Hot'
@@ -89,7 +85,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   kind: 'StorageV2'
   sku: {
     name: sku
-    tier: tier
   }
   properties: {
     accessTier: accessTier
@@ -128,10 +123,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01' = {
   parent: storageAccount
   name: 'default'
-  sku: {
-    name: sku
-    tier: tier
-  }
   properties: {
     isVersioningEnabled: enableVersioning
     deleteRetentionPolicy: {
@@ -153,10 +144,6 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
 resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2025-01-01' = {
   parent: storageAccount
   name: 'default'
-  sku: {
-    name: sku
-    tier: tier
-  }
   properties: {
     shareDeleteRetentionPolicy: {
       enabled: true

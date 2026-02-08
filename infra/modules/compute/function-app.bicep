@@ -55,14 +55,10 @@ param enablePrivateEndpoint bool = false
 @description('Subnet ID for private endpoint (required if enablePrivateEndpoint is true)')
 param privateEndpointSubnetId string = ''
 
-@description('Custom domain name (optional)')
-param customDomainName string = ''
-
 @description('Environment-specific app settings (additional to defaults)')
 param additionalAppSettings array = []
 
 // Determine plan kind and tier based on SKU
-var isConsumption = sku == 'Y1'
 var isFlex = sku == 'Flex'
 
 // Common app settings (excluding runtime-specific ones that vary by plan)
@@ -143,11 +139,11 @@ var functionAppBaseProperties = {
   httpsOnly: true
   publicNetworkAccess: enablePrivateEndpoint ? 'Disabled' : 'Enabled'
   clientAffinityEnabled: false
-  siteConfig: siteConfig
 }
 
-// Flex-specific properties
-var functionAppFlexConfig = {
+// Flex-specific runtime configuration
+var functionAppFlexRuntime = {
+  siteConfig: siteConfig
   functionAppConfig: {
     deployment: {
       storage: {
@@ -170,8 +166,13 @@ var functionAppFlexConfig = {
   }
 }
 
-// Merge Flex config into base properties if needed
-var functionAppProperties = isFlex ? union(functionAppBaseProperties, functionAppFlexConfig) : functionAppBaseProperties
+// Standard plan config
+var functionAppStandard = {
+  siteConfig: siteConfig
+}
+
+// Merge config based on plan type
+var functionAppProperties = isFlex ? union(functionAppBaseProperties, functionAppFlexRuntime) : union(functionAppBaseProperties, functionAppStandard)
 
 // Function App
 resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
@@ -247,6 +248,4 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = if (e
 output id string = functionApp.id
 output name string = functionApp.name
 output hostname string = functionApp.properties.defaultHostName
-output principalId string = functionApp.identity.principalId
-output stagingSlotName string = enableDeploymentSlots ? stagingSlot.name : ''
-output privateEndpointId string = enablePrivateEndpoint ? privateEndpoint.id : ''
+
