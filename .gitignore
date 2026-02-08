@@ -1,4 +1,6 @@
 /.vscode
-infra/workloads/**/environments/*.bicepparam
+infra/workloads/**/environments/*.json
+infra/workloads/**/*.json
 infra/workloads/**/DEPLOYMENT-NOTES.md
 infra/workloads/**/*.local.md
+deployment.log

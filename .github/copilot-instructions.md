@@ -1,30 +1,29 @@
 # Copilot Instructions for `cerebricep`
 
-## Repository Overview
+## 1. Repository Overview
 
-**cerebricep** is an Infrastructure-as-Code (IaC) project for deploying workloads to Azure using **Bicep** templates and **GitHub Actions** for CI/CD automation. The project implements a **workload-centric architecture** where each workload is completely self-contained with its own main template, parameters, and deployment pipeline.
-
-### Key Facts
 - **Language**: Bicep (Azure ARM template DSL)
-- **Tools**: Azure CLI, GitHub Actions
-- **Target**: Azure subscription-level deployments (each workload creates its own resource group)
-- **Architecture**: Workload-centric (independent deployments, zero cross-workload dependencies)
+- **Deployment**: Azure subscription-scope with Azure CLI + GitHub Actions
+- **Architecture**: Workload-centric (independent, no cross-workload dependencies)
+- **Goal**: Infrastructure-as-Code with repeatable, version-controlled deployments
 
-## Project Architecture
+## 2. Project Structure
 
-### Workload-Centric Structure
 ```
 infra/
-├── modules/              # Shared reusable building blocks
-│   ├── ai/
-│   ├── compute/
-│   ├── config/
-│   ├── data/
-│   ├── identity/
-│   └── monitoring/
+├── modules/              # Reusable building blocks (scoped to resource group)
+│   ├── ai/               # Document Intelligence, Cognitive Services
+│   ├── compute/          # Function App, App Service Plan
+│   ├── config/           # Key Vault, App Configuration
+│   ├── data/             # Cosmos DB, DocumentDB, Storage Account, SQL
+│   ├── identity/         # User-Assigned Managed Identity
+│   ├── messaging/        # Event Grid
+│   └── monitoring/       # Log Analytics, Application Insights, Actions
 └── workloads/
-    └── authpilot/        # Self-contained workload
-        ├── main.bicep    # Subscription-scope orchestration
+    ├── authpilot/        # Self-contained workload (subscription-scope main.bicep)
+    └── {workload-name}/
+        ├── main.bicep    # Orchestration template (creates RG + deploys modules)
+        ├── DEPLOYMENT-NOTES.md
         └── environments/
             ├── dev.bicepparam
             ├── uat.bicepparam
@@ -32,67 +31,94 @@ infra/
 ```
 
 ### Core Principles
-1. **Each workload is independent** - Has its own `main.bicep` and parameter files
-2. **No shared main template** - Workloads compose modules they need
-3. **Single source of truth** - Workload's `main.bicep` + `environments/*.bicepparam` contain everything
-4. **Zero cross-workload impact** - Changes to one workload don't affect others
-5. **No scripts** - Everything defined in Bicep templates (repeatable, version-controlled)
-
-### Shared Modules (infra/modules/)
-Reusable building blocks organized by domain:
-- `ai/` - Document Intelligence
-- `compute/` - Function App + App Service Plan  
-- `config/` - Key Vault, App Configuration
-- `data/` - Cosmos DB, DocumentDB (MongoDB), Storage Account
-- `identity/` - User-Assigned Managed Identity
-- `monitoring/` - Log Analytics, Application Insights
-
-**Module characteristics:**
-- Resource Group scope (not subscription scope)
-- Standalone (no external dependencies)
-- Accept: `location`, `tags`, resource-specific parameters
-- Output: resource IDs, endpoints, principal IDs (for RBAC chains)
+- **Each workload is independent**: Its own main.bicep + parameter files
+- **Module scope**: Resource Group (not subscription scope)
+- **Module design**: Standalone, accept (location, tags, resource params), output (IDs, endpoints, principal IDs)
+- **No scripts**: Everything in Bicep templates
+- **No hardcoded values**: All parameters in .bicepparam files
 
 ### Current Workloads
+- **AuthPilot**: `infra/workloads/authpilot/` — Fax processing with DocumentDB (MongoDB)
 
-#### AuthPilot
-- **Location**: `infra/workloads/authpilot/`
-- **Purpose**: Fax processing with DocumentDB (MongoDB)
-- **Deployed Resources**: Resource Group + DocumentDB
-- **Modules Used**: `modules/data/documentdb.bicep`
-- **Workflow**: `.github/workflows/deploy-authpilot.yml`
+## 3. Mandatory Pre-Deployment Validation Pipeline
 
-## Build & Validation Commands
+**REQUIRED SEQUENCE (never skip, never reorder):**
 
-### Prerequisites
-- **Azure CLI** (v2.60+) with Bicep support installed: `az bicep upgrade`
-- **az login** credentials configured
-- **GitHub environment variables** set in Actions: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-
-### Validating a Workload (Always Run Before Committing)
+### Step 1: Build Validation
 ```bash
-# Validate authpilot workload
-az bicep build --file infra/workloads/authpilot/main.bicep --stdout > /dev/null
-az bicep build-params --file infra/workloads/authpilot/environments/dev.bicepparam --outfile /dev/null
-
-# Validate individual shared modules (optional)
-az bicep build --file infra/modules/data/documentdb.bicep --stdout > /dev/null
+az bicep build --file infra/workloads/{workload}/main.bicep --verbose
+az bicep build-params --file infra/workloads/{workload}/environments/{env}.bicepparam --verbose
 ```
+- **Expected**: No errors (linting warnings OK)
+- **Why mandatory**: Catches syntax errors, missing modules, resource conflicts before deployment
 
-### Deploying a Workload
+### Step 2: Dry-Run Analysis (what-if)
 ```bash
-# Deploy authpilot to dev environment
+az deployment sub what-if \
+  --location {region} \
+  --template-file infra/workloads/{workload}/main.bicep \
+  --parameters infra/workloads/{workload}/environments/{env}.bicepparam 2>&1 | grep -i "create\|modify\|delete\|quota\|error"
+```
+- **Expected**: Shows resources to create/modify, no quota errors
+- **Why mandatory**: Reveals quota limits, permission issues, parameter mismatches BEFORE actual deployment
+
+### Step 3: Deployment
+```bash
 az deployment sub create \
-  --location eastus \
-  --template-file infra/workloads/authpilot/main.bicep \
-  --parameters infra/workloads/authpilot/environments/dev.bicepparam
+  --name {workload}-{env}-$(date +%s) \
+  --location {region} \
+  --template-file infra/workloads/{workload}/main.bicep \
+  --parameters infra/workloads/{workload}/environments/{env}.bicepparam \
+  --verbose 2>&1 | tee deployment.log
 ```
+- **Expected**: `"provisioningState": "Succeeded"`
+- **If timeout appears**: IGNORE. Deployment continues in background. Wait 60 sec, then verify: `az resource list -g rg-{workload}-{env} -o table`
 
-**Success Indicator**: Outputs valid ARM template JSON with no warnings/errors (warnings about Bicep versions can be ignored).
+### Step 4: Verification
+```bash
+az resource list -g rg-{workload}-{env} --query "[].{Name:name, Type:type}" -o table
+```
+- **Expected**: All resources present
+- **Why**: Confirms nothing was skipped, dependencies resolved
 
-## Key Project Rules & Patterns
 
-### 🔒 CRITICAL SECURITY RULE: No Credentials in Tracked Files
+
+## 4. Critical Lessons from Healthcare Call Agent Deployment (Feb 2026)
+
+### Module Parameter Chain Validation
+- **Rule**: Every parameter passed to a module at call site must be defined in module's @param
+- **Audit Finding**: Function App module had `isFlex` logic but never received `sku` parameter value
+- **Prevention**: After updating module, verify ALL parameters are satisfied at all call sites
+- **Check**: `az bicep build --file main.bicep --verbose` catches undefined params before deployment
+
+### API Version Compatibility by Region
+- **Rule**: Never use preview API versions (e.g., `@2024-01-01-preview`) without regional verification
+- **Audit Finding**: CommunicationServices `@2024-03-31` not registered globally; SQL `@2024-01-01-preview` unavailable in westus
+- **Prevention**: Use stable GA versions only (e.g., `@2023-08-01`, `@2023-04-01`)
+- **Discovery**: Read Azure error message for supported API versions; test with `what-if` before deployment
+
+### Identity Type Property Matching
+- **Rule**: Output properties must match identity type (SystemAssigned vs UserAssigned)
+- **Audit Finding**: Function App outputs tried to read `principalId` from UserAssigned identity (doesn't exist)
+- **UserAssigned properties**: `type`, `userAssignedIdentities` (not `principalId`)
+- **SystemAssigned properties**: `type`, `principalId` (has principal for RBAC)
+- **Prevention**: Check ARM template docs for identity type before defining outputs
+
+### Parameter File Validation
+- **Rule**: Parameter files MUST contain actual resource names/values, NOT placeholders
+- **Audit Finding**: Subscription ID placeholder prevented cross-RG resource references
+- **Check**: `az bicep build-params --file {env}.bicepparam --verbose` before deployment
+- **Discovery**: `az resource list -g {shared-rg} --query "[].name" -o tsv` to get exact names
+
+### Quota Checks Before App Service Plans
+- **Rule**: For Function Apps, check quota BEFORE choosing plan tier
+- **Audit Finding**: Y1 Consumption (zero "Dynamic VMs" quota) and EP1 ElasticPremium (zero VM quota) blocked
+- **Solution**: Use **Flex Consumption** (quota-free) for dev/proof-of-concept
+- **Note**: Flex requires `functionAppConfig` object on Function App creation (see "Common Errors" section)
+
+## 5. Key Project Rules & Patterns
+
+### Security: No Credentials in Tracked Files
 **NEVER add actual or example credentials/secrets to any file that is NOT in `.gitignore`.** This includes:
 - ❌ API keys, connection strings, UUIDs
 - ❌ Example credentials (even as placeholders like `12345678-abcd-...`)
@@ -111,87 +137,167 @@ az deployment sub create \
 - `.github/workflows/**`
 - `scripts/**` (unless the script intentionally outputs secrets to terminal, not files)
 
-### Naming Conventions (Bicep)
-- All resource names follow pattern: `{resourceType}-{workloadName}-{environment}`
-- Storage account names: `st{workloadNameNoHyphens}{environment}` (no hyphens, max 24 chars)
-- Example: `func-authpilot-dev`, `mongodb-authpilot-prod`, `kv-authpilot-uat`
 
-### Module Structure
-Every module:
-- **Accepts**: `location`, `tags`, resource-specific parameters
-- **Outputs**: resource IDs, connection strings, endpoints, principal IDs (for RBAC chains)
-- **Uses**: Resource Group scope (not subscription scope)
-- **Depends on**: Nothing external (standalone, composable)
+### Naming Conventions
+- Pattern: `{resourceType}-{workloadName}-{environment}` (e.g., `func-authpilot-dev`, `kv-authpilot-uat`)
+- Storage accounts: `st{workloadNoHyphens}{env}` (max 24 chars, no hyphens)
+
+### Module Design
+- **Scope**: Resource Group (never subscription scope in modules)
+- **Parameters**: Accept `location`, `tags`, resource-specific params
+- **Outputs**: IDs, endpoints, principal IDs (for RBAC chains)
+- **Dependencies**: Standalone, no external dependencies
 
 ### Parameter Flow
-- **Workload main.bicep** defines parameters and enforcement logic (allowed values, constraints)
-- **environments/*.bicepparam** files provide environment-specific values
-- **No hardcoded values** in module files - everything parameterized
-- **Tags** are merged at workload template level: `union(tags, {environment, workload, managedBy})`
+- **main.bicep**: Defines parameters + enforcement logic (allowed values, constraints)
+- **environments/*.bicepparam**: Environment-specific values only
+- **Rule**: No hardcoded values in modules; everything parameterized
+- **Tags**: Merge at workload level: `union(tags, {environment, workload, managedBy})`
 
 ### RBAC & Security
-- All services authenticated via **User-Assigned Managed Identity**
-- Key Vault grants permissions to identity via `principalId` (e.g., `identity.outputs.principalId`)
-- Function App environment variables reference Key Vault URI + managed identity client ID
-- Private endpoints enabled only in uat/prod (controlled via `enablePrivateEndpoints` param)
+- **Identity**: All services use User-Assigned Managed Identity
+- **Key Vault access**: Grant permissions via `principalId` output
+- **Private endpoints**: Enable only in uat/prod (controlled by parameter)
 
-### Bicep Linting Rules (bicepconfig.json)
-- **Errors** (must fix): `secure-parameter-default`, `use-secure-value-for-secure-inputs`, `adminusername-should-not-be-literal`, `protect-commandtoexecute-secrets`
-- **Warnings** (should fix): `no-unused-params`, `no-unused-vars`, `simplify-interpolation`, `no-hardcoded-location`, `no-hardcoded-env-urls`
+### Bicep Linting (bicepconfig.json)
+- **Errors** (must fix): Secure parameters, admin usernames, secrets in commands
+- **Warnings** (should fix): Unused params, hardcoded locations, deprecated APIs
 
-## Common Tasks for Agents
+## 6. Common Tasks
 
 ### Adding a New Module
-1. Create file: `infra/modules/{category}/new-resource.bicep`
-2. Follow this structure:
-   - Comments with `// ==== ... ====` section dividers
-   - `@description()` decorator on every parameter
-   - Output block with all relevant resource IDs/endpoints
-3. Add module deployment to workload's `main.bicep` with unique `name: 'modulename-${uniqueString(deployment().name)}'`
-4. Add outputs to workload's `main.bicep` outputs block
-5. Run `az bicep build --file infra/workloads/{workload}/main.bicep --stdout > /dev/null` to validate
-6. Update workload's `environments/*.bicepparam` files with new parameters
+1. Create: `infra/modules/{category}/new-resource.bicep`
+2. Add `@description()` decorators on all parameters
+3. Define outputs block with resource IDs/endpoints
+4. In workload's main.bicep: Add module deployment with unique symbolic name
+5. Update workload's `environments/*.bicepparam` files with new parameters
+6. Validate: `az bicep build --file infra/workloads/{workload}/main.bicep --verbose`
 
 ### Adding a New Workload
-1. Create directory: `infra/workloads/{workload-name}/`
-2. Create `main.bicep` (subscription scope, creates resource group, composes needed modules)
-3. Create `environments/dev.bicepparam` (and uat/prod as needed)
-4. Reference modules using relative path: `../../modules/{category}/{module}.bicep`
-5. Create GitHub workflow: `.github/workflows/deploy-{workload-name}.yml`
-6. Validate: `az bicep build --file infra/workloads/{workload-name}/main.bicep`
+1. Create: `infra/workloads/{workload-name}/main.bicep` (subscription scope)
+2. Create: `infra/workloads/{workload-name}/environments/{dev,uat,prod}.bicepparam`
+3. Reference modules: `../../modules/{category}/{module}.bicep`
+4. Create workflow: `.github/workflows/deploy-{workload-name}.yml`
+5. Validate: `az bicep build --file infra/workloads/{workload-name}/main.bicep`
 
-### Updating Parameters
-- **Never modify workload `main.bicep` parameter defaults** - change them in `environments/{env}.bicepparam` instead
-- Test with: `az bicep build-params --file infra/workloads/{workload}/environments/dev.bicepparam --outfile /dev/null`
-- Ensure parameter names match exactly between `main.bicep` and `*.bicepparam`
+### Debugging Failed Deployments
+1. Check build output: `az bicep build --file {changed_bicep_file} --verbose`
+2. Check parameters: Confirm all values in `*.bicepparam` are actual (not placeholders)
+3. Check RBAC: Ensure managed identity has permissions
+4. Check outputs: Verify all referenced outputs exist on their resources
+5. **DO NOT delete RG** - Fix template and redeploy (idempotent)
 
-### Debugging Deployments
-When a GitHub Actions deployment fails:
-1. Check the "Validate" step output for Bicep errors (run `az bicep build --file infra/workloads/{workload}/main.bicep` locally to reproduce)
-2. Look for RBAC issues (managed identity may not have permission to access Key Vault) - add `principalId` grant in Key Vault module
-3. Verify all module outputs referenced in dependent modules exist
-4. Check environment variables in GitHub environment settings match parameter file expectations
+## 7. Common Errors & Fixes
 
-## Testing & Validation Pipeline
+### Error: Storage Account Name Too Long
+**Message**: `"value can have length as large as 106... max length 63"`
+**Fix**: Use `'st${take(uniqueString(subscription().subscriptionId), 21)}'` (always 23 chars)
+**Prevention**: Test with `az bicep build --verbose`
 
-All pull requests automatically run:
-- **Bicep Build & Lint** - Checks syntax and bicepconfig.json rules
-- **What-If Analysis** - Previews ARM template changes (when credentials available)
-- **Security Scan** - Checkov security validation (if configured)
+### Error: Read-Only Properties in Child Resources
+**Message**: `"sku/tier property is read-only" in blobServices, fileServices`
+**Fix**: Remove `sku`/`tier` from child resources; parent storageAccount inherits
+**Prevention**: Check ARM template docs; child services cannot override parent SKU
 
-**To replicate locally** for any file changed:
+### Error: SubscriptionIsOverQuotaForSku
+**Message**: `"Current Limit (ElasticPremium VMs): 0"`
+**Fix #1 (Quick)**: Use **Flex Consumption** plan (quota-free)
+- Change: `appServicePlanSku = 'EP1'` → `appServicePlanSku = 'Flex'`
+- Note: Flex requires `functionAppConfig` object (see below)
+**Fix #2 (Permanent)**: Request quota in Azure Portal → Subscriptions → Usage + quotas
+**Prevention**: Run `what-if` analysis before deployment (`az deployment sub what-if ... | grep -i quota`)
+
+### Error: API Version Not Available in Region
+**Message**: `"No registered resource provider found for location 'westus' and API version '2024-01-01-preview'"`
+**Fix**: Use stable GA versions: `@2023-08-01`, `@2023-04-01`
+**Prevention**: Never use `-preview` versions; check error message for supported list
+
+### Error: Parameter Not Found / Module Chain Broken
+**Message**: `"The template output 'principalId' doesn't exist"` or undefined parameter
+**Fix**: Verify module call site passes ALL parameters module expects
+**Prevention**: Before deploy, check: Does main.bicep pass `sku` to functionAppModule? Does output match identity type?
+
+### Error: Flex Plan Missing Runtime Configuration
+**Message**: `"properties.functionAppConfig is invalid... FunctionAppConfig is required on create"`
+**Fix**: Add functionAppConfig object to Function App properties when using Flex:
+```bicep
+functionAppConfig: {
+  deployment: {
+    storage: { type: 'blobContainer', value: 'https://...' }
+  }
+  scaleAndConcurrency: { maximumInstanceCount: 100, instanceMemoryMB: 2048 }
+  runtime: { name: 'dotnet-isolated', version: '8.0' }
+}
+```
+**Prevention**: Only use with Flex plan; other plans ignore it
+
+### Error: Parameter File Contains Placeholders
+**Message**: `"parameter not found"` or cross-RG resource not found
+**Fix**: Parameter files must contain ACTUAL values, not `{YOUR_SUBSCRIPTION_ID}`
+**Discovery**: `az resource list -g {shared-rg} --query "[].name" -o tsv`
+**Prevention**: Validate: `az bicep build-params --file {env}.bicepparam --verbose`
+
+### Error: Deployment Timeout (False Negative)
+**Message**: `"Long-running operation wait cancelled"` (exit 130)
+**Fix**: IGNORE. Deployment continues in background. Wait 60 sec, verify: `az resource list -g rg-{workload} -o table`
+**Prevention**: Azure CLI messaging issue, not code failure; always verify resources after timeout
+
+### Error: Secrets in Environment Block
+**Message**: `"Unrecognized named-value: 'secrets'" on environment.url`
+**Fix**: Remove `secrets.*` from `environment` block; use only in `with:`, `env:`, `run:`
+**Prevention**: `environment` block is metadata-only; never use secrets context there
+
+## 8. RG Idempotency Rule (Critical)
+
+**If deployment fails on one resource**:
+- ❌ **DO NOT** delete the entire Resource Group
+- ✅ **DO** keep the RG and fix the template
+- ✅ Redeploy to same RG: `az deployment sub create ... (same params)`
+- ✅ Resources that succeeded are skipped; failed ones retry with fix
+
+**Why**: RG deletion takes 10+ minutes and loses all context. Template fixes take 2-5 min to redeploy.
+
+**When to delete RG**:
+- Only if RG location must change (immutable, requires new RG)
+- Or fundamental template design flaw requires rebuild
+
+**Pattern**:
+1. Read error: `az deployment sub show -n {deployment-name} --query "properties.error"`
+2. Fix Bicep/parameters
+3. Redeploy immediately to same RG
+4. Verify: `az resource list -g rg-{workload}-{env} -o table`
+
+## 9. Azure CLI Best Practices
+
+### Always Use Verbose Output
+- **All `az deployment` commands**: Add `--verbose`
+- **All `az bicep` commands**: Use `--stdout` for output capture
+- **All background deployments**: Use `2>&1` to capture stderr
+- **Never use `> /dev/null`** unless specifically testing build success
+
+**Why**: Azure CLI sometimes swallows output ("The content for this response was already consumed"  ). Verbose mode ensures error messages are visible.
+
+**Correct**:
 ```bash
-az bicep build --file {changed_bicep_file}
+az deployment sub create --name {name} --location {region} --template-file {bicep} --parameters {params} --verbose 2>&1 | tee deployment.log
 ```
 
-## Important Constraints & Notes
+**Wrong**:
+```bash
+az deployment sub create ... > /dev/null  # Silent failures!
+```
 
-- **Always deploy to resource group scope** in modules, not subscription scope
-- **Module dependencies**: Function App module depends on all 7 other modules (ensure outputs exist)
-- **Recommended environment staging**: Configure dev to auto-deploy from main branch; require manual workflow dispatch for uat/prod
-- **No environment-specific bicep files** - use bicepparam for all variations
-- **Managed identity must be deployed first** - all other modules reference its outputs
+## 10. Security & Governance
 
----
+### No Credentials in Tracked Files
+- ❌ API keys, connection strings, UUIDs in `.bicep` / `.bicepparam` files
+- ❌ Example credentials like `12345678-abcd-...`
+- ❌ Subscription IDs, Client IDs, Tenant IDs in documentation
+- ✅ Use `{YOUR_SUBSCRIPTION_ID}` placeholder in docs
+- ✅ Direct users to Azure CLI output to get actual values
+- ✅ Keep `.gitignore` up to date
 
-**Trust these instructions.** Search the codebase only if you encounter an error or if information here is incomplete. Check `docs/architecture.md` and `docs/deployment-guide.md` for deeper architectural details.
+### GitHub Actions Secrets
+- Use GitHub environment secrets for Azure credentials
+- Reference in step-level `with:`, `env:`, `run:` blocks ONLY
+- Never in `environment.url` or `environment` metadata block

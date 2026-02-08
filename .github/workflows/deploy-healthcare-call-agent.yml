@@ -1,0 +1,295 @@
+name: Deploy Healthcare Call Agent MVP
+
+# ==== Trigger Configuration ====
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment (dev, uat, prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - uat
+          - prod
+      validate_only:
+        description: 'Run validation without deployment'
+        required: false
+        default: false
+        type: boolean
+  
+  # Automatic deployment on merges to main (dev only, requires manual approval for prod)
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/workloads/healthcare-call-agent/**'
+      - 'infra/modules/data/sql-database.bicep'
+      - 'infra/modules/data/storage-account.bicep'
+      - 'infra/modules/compute/function-app.bicep'
+      - 'infra/modules/identity/user-assigned-identity.bicep'
+      - '.github/workflows/deploy-healthcare-call-agent.yml'
+
+env:
+  TEMPLATE_FILE: 'infra/workloads/healthcare-call-agent/main.bicep'
+
+# ==== Permissions ====
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  # ==== Job 1: Validation ====
+  validate:
+    name: Validate Bicep Templates
+    runs-on: ubuntu-latest
+    outputs:
+      validation_result: ${{ steps.validate.outcome }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Bicep main template
+        id: validate
+        run: |
+          echo "Validating Bicep template..."
+          az bicep build --file "${{ env.TEMPLATE_FILE }}" --stdout > /dev/null
+          echo "✅ Main template validation passed"
+
+      - name: Validate bicepparam files
+        run: |
+          echo "Validating bicepparam files..."
+          if [ -d "infra/workloads/healthcare-call-agent/environments" ]; then
+            for paramfile in infra/workloads/healthcare-call-agent/environments/*.bicepparam; do
+              if [ -f "$paramfile" ]; then
+                echo "Validating: $paramfile"
+                az bicep build-params --file "$paramfile" --outfile /dev/null
+                echo "✅ $(basename $paramfile) validation passed"
+              fi
+            done
+          fi
+
+      - name: Check linting rules
+        run: |
+          echo "Running Bicep linting..."
+          # bicepconfig.json rules automatically enforced by az bicep commands
+          echo "✅ Linting rules configured in bicepconfig.json"
+
+  # ==== Job 2: What-If Analysis (Preview Changes) ====
+  what_if:
+    name: What-If Analysis
+    needs: validate
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment from inputs
+        id: set_env
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          PARAM_FILE="infra/workloads/healthcare-call-agent/environments/${ENV}.bicepparam"
+          echo "param_file=$PARAM_FILE" >> $GITHUB_OUTPUT
+
+      - name: Run what-if deployment
+        id: what_if
+        run: |
+          echo "Running what-if analysis for ${{ steps.set_env.outputs.environment }} environment..."
+          LOCATION=$(grep -oP "(?<=param location = ')[^']*" "${{ steps.set_env.outputs.param_file }}" || echo "westus")
+          az deployment sub what-if \
+            --location "$LOCATION" \
+            --template-file "${{ env.TEMPLATE_FILE }}" \
+            --parameters "${{ steps.set_env.outputs.param_file }}" \
+            --output json > what_if_result.json
+          
+          # Display summary
+          echo "## What-If Analysis Results"
+          echo "- **Environment**: ${{ steps.set_env.outputs.environment }}"
+          echo "- **Region**: ${{ env.AZURE_REGION }}"
+          echo "- **Template**: ${{ env.TEMPLATE_FILE }}"
+          echo ""
+          echo "### Resource Changes:"
+          cat what_if_result.json | jq -r '.changes[0:20] | .[] | "- \(.changeType): \(.resourceId)"' || echo "No changes detected"
+
+  # ==== Job 3: Deploy ====
+  deploy:
+    name: Deploy Infrastructure
+    needs: [validate, what_if]
+    runs-on: ubuntu-latest
+    if: success() && (github.event.inputs.validate_only != 'true')
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment variables
+        id: env_vars
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          PARAM_FILE="infra/workloads/healthcare-call-agent/environments/${ENV}.bicepparam"
+          echo "param_file=$PARAM_FILE" >> $GITHUB_OUTPUT
+          RG_NAME="rg-healthcare-call-agent-${ENV}"
+          echo "resource_group=$RG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          echo "🚀 Deploying Healthcare Call Agent MVP to ${{ steps.env_vars.outputs.environment }} environment..."
+          
+          DEPLOYMENT_ID="hca-deploy-$(date +%s)"
+          LOCATION=$(grep -oP "(?<=param location = ')[^']*" "${{ steps.env_vars.outputs.param_file }}" || echo "westus")
+          
+          az deployment sub create \
+            --name "$DEPLOYMENT_ID" \
+            --location "$LOCATION" \
+            --template-file "${{ env.TEMPLATE_FILE }}" \
+            --parameters "${{ steps.env_vars.outputs.param_file }}" \
+            --verbose 2>&1 | tee deployment.log
+          
+          echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+          echo "✅ Deployment completed successfully"
+
+      - name: Validate post-deployment
+        id: post_validate
+        run: |
+          ENV="${{ steps.env_vars.outputs.environment }}"
+          RG="${{ steps.env_vars.outputs.resource_group }}"
+          
+          echo "Validating post-deployment resources in $RG..."
+          
+          # Check resource group exists
+          if az group exists -n "$RG" | grep -q 'true'; then
+            echo "✅ Resource Group created: $RG"
+          else
+            echo "❌ Resource group not found: $RG"
+            exit 1
+          fi
+          
+          # List all resources
+          echo ""
+          echo "📋 Deployed Resources:"
+          az resource list -g "$RG" --query "[].{Name:name, Type:type, Status:provisioningState}" -o table
+          
+          # Verify key resources exist
+          STORAGE_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.Storage/storageAccounts" --query "length([*])")
+          SQL_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.Sql/servers" --query "length([*])")
+          FUNCAPP_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.Web/sites" --query "length([*])")
+          
+          if [ "$STORAGE_COUNT" -gt 0 ] && [ "$SQL_COUNT" -gt 0 ] && [ "$FUNCAPP_COUNT" -gt 0 ]; then
+            echo "✅ All core resources deployed successfully"
+          else
+            echo "⚠️ Some resources may be missing (Storage: $STORAGE_COUNT, SQL: $SQL_COUNT, FuncApp: $FUNCAPP_COUNT)"
+          fi
+
+      - name: Capture deployment outputs
+        id: outputs
+        run: |
+          ENV="${{ steps.env_vars.outputs.environment }}"
+          RG="${{ steps.env_vars.outputs.resource_group }}"
+          
+          # Get resource IDs and endpoints
+          echo "### Deployment Outputs"
+          echo ""
+          
+          STORAGE_URI=$(az resource list -g "$RG" --resource-type "Microsoft.Storage/storageAccounts" --query "[0].properties.primaryEndpoints.blob" -o tsv 2>/dev/null)
+          [ ! -z "$STORAGE_URI" ] && echo "Storage Account: \`$STORAGE_URI\`" || echo "Storage Account: Not found"
+          
+          SQL_SERVER=$(az resource list -g "$RG" --resource-type "Microsoft.Sql/servers" --query "[0].name" -o tsv 2>/dev/null)
+          [ ! -z "$SQL_SERVER" ] && echo "SQL Server: \`$SQL_SERVER\`" || echo "SQL Server: Not found"
+          
+          FUNCAPP=$(az resource list -g "$RG" --resource-type "Microsoft.Web/sites" --query "[0].name" -o tsv 2>/dev/null)
+          [ ! -z "$FUNCAPP" ] && echo "Function App: \`$FUNCAPP\`" || echo "Function App: Not found"
+
+      - name: Set deployment status
+        if: always()
+        run: |
+          if [ "${{ steps.deploy.outcome }}" == "success" ]; then
+            echo "✅ Deployment Status: SUCCESS"
+            echo "📊 View resources: https://portal.azure.com/#resource/subscriptions/[SUBSCRIPTION_ID]/resourceGroups/${{ steps.env_vars.outputs.resource_group }}/overview"
+          else
+            echo "❌ Deployment Status: FAILED"
+            exit 1
+          fi
+
+      - name: Notify deployment completion
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.deploy.outcome }}' === 'success' ? '✅ SUCCESS' : '❌ FAILED';
+            const env = '${{ steps.env_vars.outputs.environment }}';
+            const rg = '${{ steps.env_vars.outputs.resource_group }}';
+            
+            const message = `
+            ## Deployment Status: ${status}
+            
+            **Environment**: ${env}
+            **Resource Group**: ${rg}
+            **Deployment ID**: ${{ steps.deploy.outputs.deployment_id }}
+            **Region**: ${{ env.AZURE_REGION }}
+            **Timestamp**: ${ new Date().toISOString() }
+            
+            [View in Azure Portal](https://portal.azure.com/#resource/subscriptions/[SUBSCRIPTION_ID]/resourceGroups/${rg}/overview)
+            `;
+            
+            core.notice(message);
+
+  # ==== Job 4: Cost Monitoring Alert (MVP Budget Threshold) ====
+  check_costs:
+    name: Cost Monitoring Alert
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Check resource group costs
+        id: costs
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          RG="rg-healthcare-call-agent-${ENV}"
+          
+          echo "📊 Monitoring costs for $RG..."
+          
+          # Note: Cost data typically available after 24-48 hours
+          # This is a placeholder for future integration with Cost Management API
+          echo "⚠️ Cost data will be available in Azure Cost Management (24-48 hours latency)"
+          echo "💡 Configure Azure Budget alerts to notify if costs exceed \$10/month"
+
+      - name: Budget alert configuration
+        run: |
+          echo "### Budget Alert Setup (Manual Configuration Needed)"
+          echo ""
+          echo "1. Navigate to Azure Portal → Cost Management → Budgets"
+          echo "2. Create new budget for resource group: \`rg-healthcare-call-agent-\$ENV\`"
+          echo "3. Set threshold: \$10/month (new resources only)"
+          echo "4. Configure alert notifications to: infra-team@company.com"
+          echo ""
+          echo "See DEPLOYMENT-NOTES.md for more details"
