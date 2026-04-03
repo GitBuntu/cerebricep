@@ -18,23 +18,6 @@ on:
         required: false
         default: false
         type: boolean
-  
-  # Automatic deployment on merges to main (dev only)
-  push:
-    branches:
-      - main
-    paths:
-      - 'infra/workloads/referral-triage/**'
-      - 'infra/modules/ai/document-intelligence.bicep'
-      - 'infra/modules/compute/function-app.bicep'
-      - 'infra/modules/compute/app-service-plan.bicep'
-      - 'infra/modules/data/sql-database.bicep'
-      - 'infra/modules/data/storage-account.bicep'
-      - 'infra/modules/config/key-vault.bicep'
-      - 'infra/modules/identity/user-assigned-identity.bicep'
-      - 'infra/modules/monitoring/log-analytics.bicep'
-      - 'infra/modules/monitoring/application-insights.bicep'
-      - '.github/workflows/deploy-referral-triage.yml'
 
 env:
   TEMPLATE_FILE: 'infra/workloads/referral-triage/main.bicep'
