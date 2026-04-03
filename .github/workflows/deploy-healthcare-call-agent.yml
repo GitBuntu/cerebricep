@@ -18,18 +18,6 @@ on:
         required: false
         default: false
         type: boolean
-  
-  # Automatic deployment on merges to main (dev only, requires manual approval for prod)
-  push:
-    branches:
-      - main
-    paths:
-      - 'infra/workloads/healthcare-call-agent/**'
-      - 'infra/modules/data/sql-database.bicep'
-      - 'infra/modules/data/storage-account.bicep'
-      - 'infra/modules/compute/function-app.bicep'
-      - 'infra/modules/identity/user-assigned-identity.bicep'
-      - '.github/workflows/deploy-healthcare-call-agent.yml'
 
 env:
   TEMPLATE_FILE: 'infra/workloads/healthcare-call-agent/main.bicep'

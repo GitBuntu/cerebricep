@@ -1,11 +1,6 @@
 name: Deploy AuthPilot Infrastructure
 
 on:
-  push:
-    branches: [ dev ]
-    paths:
-      - 'infra/**'
-      - '.github/workflows/deploy-authpilot.yml'
   workflow_dispatch:
 
 jobs:
