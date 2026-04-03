@@ -4,9 +4,11 @@ using '../main.bicep'
 param environment = 'dev'
 param location = 'eastus2'
 
-// SQL Parameters (⚠️ CHANGE PASSWORD before deploying)
+// SQL Parameters
+// NOTE: sqlAdminPassword must be provided at deploy-time (e.g., --parameters sqlAdminPassword=YourSecurePassword)
+// DO NOT commit passwords to this file
 param sqlAdminUsername = 'sqladmin'
-param sqlAdminPassword = 'TempPassword123!@#'  // ⚠️ MUST BE CHANGED
+// Password parameter intentionally omitted - provide via CLI or environment variable
 param sqlDatabaseSku = 'Standard_S1'
 
 // Function App - Use Consumption for cost optimization in dev

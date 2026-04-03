@@ -25,7 +25,7 @@ param sqlAdminUsername string
 
 @description('SQL Server admin password')
 @secure()
-param sqlAdminPassword string
+param sqlAdminPassword string = ''
 
 @description('SQL Database SKU')
 @allowed(['Basic', 'Standard_S0', 'Standard_S1', 'Standard_S2', 'Standard_S3', 'Standard_S4', 'Premium_P1', 'Premium_P2', 'Premium_P4', 'Premium_P6'])
@@ -68,6 +68,9 @@ param documentIntelligenceSkuName string = 'S0'
 @description('Enable private endpoints for resources')
 param enablePrivateEndpoints bool = false
 
+@description('Subnet ID for private endpoints (required if enablePrivateEndpoints is true)')
+param privateEndpointSubnetId string = ''
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -82,7 +85,7 @@ var commonTags = union(tags, {
 
 var naming = {
   identity: 'id-${workloadName}-${environment}'
-  storageAccount: 'st${workloadName}${environment}'
+  storageAccount: 'st${replace(workloadName, '-', '')}${environment}'
   keyVault: 'kv-${workloadName}-${environment}'
   logAnalytics: 'log-${workloadName}-${environment}'
   appInsights: 'appi-${workloadName}-${environment}'
@@ -232,6 +235,7 @@ module functionApp '../../modules/compute/function-app.bicep' = {
     runtime: functionAppRuntime
     runtimeVersion: functionAppRuntimeVersion
     enablePrivateEndpoint: enablePrivateEndpoints
+    privateEndpointSubnetId: privateEndpointSubnetId
   }
 }
 

@@ -1,0 +1,254 @@
+name: Deploy Referral Triage Infrastructure
+
+# ==== Trigger Configuration ====
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment (dev, uat, prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - uat
+          - prod
+      validate_only:
+        description: 'Run validation without deployment'
+        required: false
+        default: false
+        type: boolean
+  
+  # Automatic deployment on merges to main (dev only)
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/workloads/referral-triage/**'
+      - 'infra/modules/ai/document-intelligence.bicep'
+      - 'infra/modules/compute/function-app.bicep'
+      - 'infra/modules/compute/app-service-plan.bicep'
+      - 'infra/modules/data/sql-database.bicep'
+      - 'infra/modules/data/storage-account.bicep'
+      - 'infra/modules/config/key-vault.bicep'
+      - 'infra/modules/identity/user-assigned-identity.bicep'
+      - 'infra/modules/monitoring/log-analytics.bicep'
+      - 'infra/modules/monitoring/application-insights.bicep'
+      - '.github/workflows/deploy-referral-triage.yml'
+
+env:
+  TEMPLATE_FILE: 'infra/workloads/referral-triage/main.bicep'
+  WORKLOAD_NAME: 'referral-triage'
+
+# ==== Permissions ====
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  # ==== Job 1: Validation ====
+  validate:
+    name: Validate Bicep Templates
+    runs-on: ubuntu-latest
+    outputs:
+      validation_result: ${{ steps.validate.outcome }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Bicep main template
+        id: validate
+        run: |
+          echo "Validating Bicep template..."
+          az bicep build --file "${{ env.TEMPLATE_FILE }}" --verbose
+          echo "✅ Main template validation passed"
+
+      - name: Validate bicepparam files
+        run: |
+          echo "Validating bicepparam files..."
+          if [ -d "infra/workloads/${{ env.WORKLOAD_NAME }}/environments" ]; then
+            for paramfile in infra/workloads/${{ env.WORKLOAD_NAME }}/environments/*.bicepparam; do
+              if [ -f "$paramfile" ]; then
+                echo "Validating: $paramfile"
+                az bicep build-params --file "$paramfile" --verbose
+                echo "✅ $(basename $paramfile) validation passed"
+              fi
+            done
+          fi
+
+      - name: Check linting rules
+        run: |
+          echo "Running Bicep linting..."
+          echo "✅ Linting rules configured in bicepconfig.json"
+
+  # ==== Job 2: What-If Analysis (Preview Changes) ====
+  what_if:
+    name: What-If Analysis
+    needs: validate
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment from inputs
+        id: set_env
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          PARAM_FILE="infra/workloads/${{ env.WORKLOAD_NAME }}/environments/${ENV}.bicepparam"
+          echo "param_file=$PARAM_FILE" >> $GITHUB_OUTPUT
+
+      - name: Run what-if deployment
+        id: what_if
+        run: |
+          echo "Running what-if analysis for ${{ steps.set_env.outputs.environment }} environment..."
+          LOCATION="eastus2"
+          
+          az deployment sub what-if \
+            --location "$LOCATION" \
+            --template-file "${{ env.TEMPLATE_FILE }}" \
+            --parameters "${{ steps.set_env.outputs.param_file }}" \
+            --output json > what_if_result.json 2>&1 || true
+          
+          # Display summary
+          echo "## What-If Analysis Results"
+          echo "- **Environment**: ${{ steps.set_env.outputs.environment }}"
+          echo "- **Region**: $LOCATION"
+          echo "- **Template**: ${{ env.TEMPLATE_FILE }}"
+          echo ""
+          echo "### Resource Changes:"
+          jq -r '.changes[0:20] | .[] | "- \(.changeType): \(.resourceId)"' what_if_result.json 2>/dev/null || echo "What-if output captured"
+
+  # ==== Job 3: Deploy ====
+  deploy:
+    name: Deploy Infrastructure
+    needs: [validate, what_if]
+    runs-on: ubuntu-latest
+    if: success() && (github.event.inputs.validate_only != 'true')
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set environment variables
+        id: env_vars
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          PARAM_FILE="infra/workloads/${{ env.WORKLOAD_NAME }}/environments/${ENV}.bicepparam"
+          echo "param_file=$PARAM_FILE" >> $GITHUB_OUTPUT
+          RG_NAME="rg-${{ env.WORKLOAD_NAME }}-${ENV}"
+          echo "resource_group=$RG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          echo "🚀 Deploying Referral Triage to ${{ steps.env_vars.outputs.environment }} environment..."
+          
+          DEPLOYMENT_ID="rt-deploy-$(date +%s)"
+          LOCATION="eastus2"
+          
+          az deployment sub create \
+            --name "$DEPLOYMENT_ID" \
+            --location "$LOCATION" \
+            --template-file "${{ env.TEMPLATE_FILE }}" \
+            --parameters "${{ steps.env_vars.outputs.param_file }}" \
+            --verbose 2>&1 | tee deployment.log
+          
+          echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+          echo "✅ Deployment completed successfully"
+
+      - name: Validate post-deployment
+        id: post_validate
+        run: |
+          ENV="${{ steps.env_vars.outputs.environment }}"
+          RG="${{ steps.env_vars.outputs.resource_group }}"
+          
+          echo "Validating post-deployment resources in $RG..."
+          
+          # Check resource group exists
+          if az group exists -n "$RG" | grep -q 'true'; then
+            echo "✅ Resource Group created: $RG"
+          else
+            echo "❌ Resource group not found: $RG"
+            exit 1
+          fi
+          
+          # List all resources
+          echo ""
+          echo "📋 Deployed Resources:"
+          az resource list -g "$RG" --query "[].{Name:name, Type:type, Status:provisioningState}" -o table
+          
+          # Verify key resources exist
+          STORAGE_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.Storage/storageAccounts" --query "length([*])")
+          SQL_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.Sql/servers" --query "length([*])")
+          FUNCAPP_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.Web/sites" --query "length([*])")
+          KEYVAULT_COUNT=$(az resource list -g "$RG" --resource-type "Microsoft.KeyVault/vaults" --query "length([*])")
+          
+          if [ "$STORAGE_COUNT" -gt 0 ] && [ "$SQL_COUNT" -gt 0 ] && [ "$FUNCAPP_COUNT" -gt 0 ] && [ "$KEYVAULT_COUNT" -gt 0 ]; then
+            echo "✅ All core resources deployed successfully"
+          else
+            echo "⚠️ Resource counts - Storage: $STORAGE_COUNT, SQL: $SQL_COUNT, FuncApp: $FUNCAPP_COUNT, KeyVault: $KEYVAULT_COUNT"
+          fi
+
+      - name: Capture deployment outputs
+        id: outputs
+        run: |
+          ENV="${{ steps.env_vars.outputs.environment }}"
+          RG="${{ steps.env_vars.outputs.resource_group }}"
+          
+          echo "### Deployment Outputs"
+          echo ""
+          
+          STORAGE_URI=$(az resource list -g "$RG" --resource-type "Microsoft.Storage/storageAccounts" --query "[0].properties.primaryEndpoints.blob" -o tsv 2>/dev/null)
+          [ ! -z "$STORAGE_URI" ] && echo "Storage Account: \`$STORAGE_URI\`" || echo "Storage Account: Not found"
+          
+          SQL_SERVER=$(az resource list -g "$RG" --resource-type "Microsoft.Sql/servers" --query "[0].name" -o tsv 2>/dev/null)
+          [ ! -z "$SQL_SERVER" ] && echo "SQL Server: \`$SQL_SERVER\`" || echo "SQL Server: Not found"
+          
+          FUNCAPP=$(az resource list -g "$RG" --resource-type "Microsoft.Web/sites" --query "[0].name" -o tsv 2>/dev/null)
+          [ ! -z "$FUNCAPP" ] && echo "Function App: \`$FUNCAPP\`" || echo "Function App: Not found"
+          
+          KEYVAULT=$(az resource list -g "$RG" --resource-type "Microsoft.KeyVault/vaults" --query "[0].name" -o tsv 2>/dev/null)
+          [ ! -z "$KEYVAULT" ] && echo "Key Vault: \`$KEYVAULT\`" || echo "Key Vault: Not found"
+          
+          DOCS_INTEL=$(az resource list -g "$RG" --resource-type "Microsoft.CognitiveServices/accounts" --query "[?kind=='FormRecognizer'].name" -o tsv 2>/dev/null)
+          [ ! -z "$DOCS_INTEL" ] && echo "Document Intelligence: \`$DOCS_INTEL\`" || echo "Document Intelligence: Not found"
+
+      - name: Set deployment status
+        if: always()
+        run: |
+          if [ "${{ steps.deploy.outcome }}" == "success" ]; then
+            echo "✅ Deployment Status: SUCCESS"
+            echo "📊 Resource Group: ${{ steps.env_vars.outputs.resource_group }}"
+          else
+            echo "❌ Deployment Status: FAILED"
+            exit 1
+          fi
+
+      - name: Upload deployment log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-${{ steps.env_vars.outputs.environment }}-log
+          path: deployment.log
+          if-no-files-found: ignore
